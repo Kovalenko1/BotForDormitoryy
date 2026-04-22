@@ -5,7 +5,7 @@ from config import BOT_TOKEN
 
 from database import get_db_session
 from models import User, RoleEnum
-from utils import determine_wing_and_floor
+from utils import parse_room
 
 TOKEN = '6837247499:AAEjFumOQbne5TyY_VDnznq4SPJ02tVdLY0'
 bot = telebot.TeleBot(TOKEN)
@@ -40,15 +40,15 @@ with next(get_db_session()) as session:
             db_user = session.query(User).filter(User.chat_id == str(user.id)).first()
             if not db_user:
                 print(user.username)
-                wing, floor = determine_wing_and_floor(room)
+                normalized_room, _, floor = parse_room(room)
                 db_user = User(
                     chat_id=str(user.id),
                     role=RoleEnum.USER,
-                    room=room,
+                    room=normalized_room,
                     username=f"{"@" if user.username else ""}{user.username or "Нетъ"}",
                     first_name=user.first_name,
                     last_name=f"{user.last_name or ''}",
                     floor=floor,
-                    wing=wing)
+                    wing="")
                 session.add(db_user)
                 session.commit()

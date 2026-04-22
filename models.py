@@ -1,7 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Enum
 import enum
-from datetime import datetime
+
+from time_utils import moscow_now
 
 Base = declarative_base()
 
@@ -63,7 +64,7 @@ class AccessKey(Base):
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String, nullable=False, unique=True, index=True)
     role_to_assign = Column(Enum(RoleEnum), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=moscow_now, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
 
@@ -77,4 +78,49 @@ class FailedNotification(Base):
     user_id = Column(Integer, nullable=False)  # ID пользователя (из таблицы users.id)
     chat_id = Column(String, nullable=False)  # chat_id
     reason = Column(String, nullable=False)  # причина (блокировка бота / ошибка и т.д.)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=moscow_now, nullable=False)
+
+
+class FloorNotificationSetting(Base):
+    __tablename__ = 'floor_notification_settings'
+
+    id = Column(Integer, primary_key=True, index=True)
+    floor = Column(Integer, unique=True, index=True, nullable=False)
+    notification_hour = Column(Integer, nullable=False)
+    notification_minute = Column(Integer, nullable=False)
+    last_notified_on = Column(Date, nullable=True)
+    updated_at = Column(DateTime, default=moscow_now, nullable=False)
+
+
+class IncomingUserMessage(Base):
+    __tablename__ = 'incoming_user_messages'
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_chat_id = Column(String, index=True, nullable=False)
+    sender_username = Column(String, nullable=True)
+    sender_role = Column(String, nullable=True)
+    sender_floor = Column(Integer, nullable=True)
+    sender_room = Column(String, nullable=True)
+    text = Column(String, nullable=False)
+    received_at = Column(DateTime, default=moscow_now, nullable=False)
+
+
+class OutgoingMessageLog(Base):
+    __tablename__ = 'outgoing_message_logs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, nullable=False, default='bot')
+    sender_chat_id = Column(String, index=True, nullable=False)
+    sender_username = Column(String, nullable=True)
+    sender_role = Column(String, nullable=True)
+    sender_floor = Column(Integer, nullable=True)
+    sender_room = Column(String, nullable=True)
+    recipient_chat_id = Column(String, index=True, nullable=False)
+    recipient_username = Column(String, nullable=True)
+    recipient_role = Column(String, nullable=True)
+    recipient_floor = Column(Integer, nullable=True)
+    recipient_room = Column(String, nullable=True)
+    text = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime, default=moscow_now, nullable=False)

@@ -1,15 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from config import (
+    DATABASE_URL,
     POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
     POSTGRES_HOST, POSTGRES_PORT
 )
 
-DATABASE_URL = (
+database_url = DATABASE_URL or (
     f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
 
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(database_url, echo=False)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

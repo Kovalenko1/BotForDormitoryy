@@ -1,0 +1,11 @@
+.git
+.gitignore
+.idea
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+.env
+postgres_data

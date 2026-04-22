@@ -51,7 +51,7 @@ def handle_show_all_users(bot: telebot.TeleBot, message: telebot.types.Message):
             bot.send_message(message.chat.id, "У вас нет прав на просмотр всех пользователей.")
             return
 
-        all_users = session.query(User).order_by(User.floor, User.wing, User.room).all()
+        all_users = session.query(User).order_by(User.floor, User.room, User.chat_id).all()
 
         if not all_users:
             bot.send_message(message.chat.id, "В базе нет ни одного пользователя.")
@@ -86,8 +86,11 @@ def handle_show_starostas(bot: telebot.TeleBot, message: telebot.types.Message):
             bot.send_message(message.chat.id, "У вас нет прав на просмотр старост.")
             return
 
-        starostas = session.query(User).filter(User.role == RoleEnum.STAROSTA).order_by(User.floor, User.wing,
-                                                                                        User.room).all()
+        starostas = session.query(User).filter(User.role == RoleEnum.STAROSTA).order_by(
+            User.floor,
+            User.room,
+            User.chat_id
+        ).all()
 
         if not starostas:
             bot.send_message(message.chat.id, "Нет ни одного старосты в базе.")

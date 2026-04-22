@@ -1,9 +1,9 @@
 import telebot
-from datetime import datetime
 
 from config import ADMINS_LIST
 from database import get_db_session
 from models import User, RoleEnum, BotLog
+from time_utils import moscow_now
 from utils import generate_access_key, cleanup_expired_keys
 
 
@@ -22,7 +22,7 @@ def handle_add_chairman(bot: telebot.TeleBot, message: telebot.types.Message):
     with next(get_db_session()) as session:
         session.add(BotLog(
             event=f"Admin {message.from_user.id} generated chairman key {key}",
-            timestamp=datetime.now(),
+            timestamp=moscow_now(),
             user_id=str(message.from_user.id)
         ))
         session.commit()
