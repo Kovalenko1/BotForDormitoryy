@@ -1,5 +1,7 @@
 from telebot import types
 
+from dashboard_links import build_dashboard_link_for_user, build_dashboard_url, is_telegram_webapp_url
+
 
 BTN_CHAIRMANS = "Председатели"
 BTN_ADD_CHAIRMAN = "+ Председатель"
@@ -24,7 +26,35 @@ BTN_MESSAGE_LOGS = "Журнал"
 BTN_SET_ROOM = "Моя комната"
 
 
-def get_main_menu(role):
+def _get_webapp_button(text: str, view: str, chat_id: str | None = None):
+    dashboard_url = (
+        build_dashboard_link_for_user(chat_id, view=view)
+        if chat_id else
+        build_dashboard_url(view=view)
+    )
+    web_app_info = getattr(types, "WebAppInfo", None)
+
+    if not is_telegram_webapp_url(dashboard_url) or web_app_info is None:
+        return text
+
+    try:
+        return types.KeyboardButton(
+            text=text,
+            web_app=web_app_info(url=dashboard_url),
+        )
+    except TypeError:
+        return text
+
+
+def _get_journal_button(chat_id: str | None = None):
+    return _get_webapp_button(BTN_MESSAGE_LOGS, "general", chat_id=chat_id)
+
+
+def _get_schedule_button(chat_id: str | None = None):
+    return _get_webapp_button(BTN_VIEW_SCHEDULE, "schedule", chat_id=chat_id)
+
+
+def get_main_menu(role, chat_id: str | None = None):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
     if role == "admin":
@@ -43,14 +73,14 @@ def get_main_menu(role):
         keyboard.add(BTN_ALL_USERS)
 
     if role in ["admin", "chairman", "starosta"]:
-        keyboard.add(BTN_VIEW_SCHEDULE, BTN_EDIT_SCHEDULE)
+        keyboard.add(_get_schedule_button(chat_id), BTN_EDIT_SCHEDULE)
         keyboard.add(BTN_DELETE_ROOMS)
         keyboard.add(BTN_SHOW_USERS)
         keyboard.add(BTN_NOTIFICATION_TIME, BTN_BROADCAST)
-        keyboard.add(BTN_MESSAGE_LOGS)
+        keyboard.add(_get_journal_button(chat_id))
 
     if role == "user":
-        keyboard.add(BTN_VIEW_SCHEDULE)
+        keyboard.add(_get_schedule_button(chat_id))
 
     if role in ["admin", "chairman", "starosta", "user"]:
         keyboard.add(BTN_SET_ROOM)

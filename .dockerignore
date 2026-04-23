@@ -9,3 +9,5 @@ __pycache__
 venv
 .env
 postgres_data
+dashboard/node_modules
+dashboard/dist

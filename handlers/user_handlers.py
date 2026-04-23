@@ -54,7 +54,7 @@ def process_become_chairman(message, bot: telebot.TeleBot):
                 db_user.role = RoleEnum.CHAIRMAN
             session.commit()
         deactivate_key(key_value)
-        bot.send_message(message.chat.id, "Поздравляем! Вы стали председателем.", reply_markup=get_main_menu("chairman"))
+        bot.send_message(message.chat.id, "Поздравляем! Вы стали председателем.", reply_markup=get_main_menu("chairman", user_chat_id))
     else:
         bot.send_message(message.chat.id, "Неверный или просроченный ключ.")
 
@@ -88,6 +88,6 @@ def process_become_starosta(message, bot: telebot.TeleBot):
             db_user.role = RoleEnum.STAROSTA
             session.commit()
         deactivate_key(key_value)
-        bot.send_message(message.chat.id, "Поздравляем! Вы стали старостой.", reply_markup=get_main_menu("starosta"))
+        bot.send_message(message.chat.id, "Поздравляем! Вы стали старостой.", reply_markup=get_main_menu("starosta", user_chat_id))
     else:
         bot.send_message(message.chat.id, "Неверный или просроченный ключ.")

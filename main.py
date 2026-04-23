@@ -38,7 +38,10 @@ from handlers.notification_handlers import handle_broadcast_message, handle_mana
 from handlers.starosta_handlers import handle_view_duty_schedule, handle_add_rooms, handle_delete_room, \
     handle_show_users
 from handlers.user_handlers import handle_set_room, handle_become_chairman, handle_become_starosta
+from bot_events import log_bot_event
+from dashboard_tunnel import start_dashboard_tunnel
 from message_audit import cleanup_old_logs, ensure_message_audit_schema, install_message_audit
+from user_access import ensure_user_access_schema
 from utils import normalize_existing_data
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -47,6 +50,7 @@ scheduler = BackgroundScheduler(timezone=desired_timezone)
 
 Base.metadata.create_all(engine)
 ensure_message_audit_schema(engine)
+ensure_user_access_schema(engine)
 normalize_existing_data()
 install_message_audit(bot)
 
@@ -103,7 +107,11 @@ def check_duty():
 
             block_today = first_in_queue.room
 
-            users_in_room = session.query(User).filter(User.room.like(f"{block_today}%")).all()
+            users_in_room = session.query(User).filter(
+                User.room.like(f"{block_today}%"),
+                User.is_blocked.is_(False),
+                User.is_whitelisted.is_(True),
+            ).all()
 
             if not users_in_room:
                 notify_starosta(
@@ -119,7 +127,7 @@ def check_duty():
                 try:
                     bot.send_message(
                         chat_id=int(user.chat_id),
-                        text=f"Сегодня дежурит ваш блок {block_today}. (в случае если вы не можете провести дежурство, пожалуйста, договоритесь с однокомнатниками или старостой вашего этажа о замене)",
+                        text=f"Сегодня дежурит ваш блок {block_today}. (в случае если вы не можете провести дежурство, пожалуйста, договоритесь с соседями по блоку или комнате о замене)",
                         category='duty',
                     )
                 except telebot.apihelper.ApiException as e:
@@ -180,7 +188,8 @@ def notify_starosta(bot, session, floor, message_text):
     """
     starosta_list = session.query(User).filter(
         User.role == RoleEnum.STAROSTA,
-        User.floor == floor
+        User.floor == floor,
+        User.is_blocked.is_(False),
     ).all()
     for st in starosta_list:
         try:
@@ -205,7 +214,7 @@ def cmd_start(message):
             db_user = User(
                 chat_id=user_chat_id,
                 role=RoleEnum.USER,
-                username=f"{"@" if username else ""}{username or "Нетъ"}",
+                username=f"{'@' if username else ''}{username or 'Нет'}",
                 first_name=user_info.first_name,
                 last_name=f"{user_info.last_name or ''}")
             session.add(db_user)
@@ -216,7 +225,7 @@ def cmd_start(message):
     bot.send_message(
         message.chat.id,
         "Привет! Рад видеть тебя здесь.\nПри возникновении трудностей с использованием бота пишите @Alexgear10001.\nПри наличии предложений по улучшению бота пишите @KVA06",
-        reply_markup=get_main_menu(user_role)
+        reply_markup=get_main_menu(user_role, user_chat_id)
     )
 
 
@@ -309,6 +318,8 @@ def main():
     scheduler.add_job(check_duty, 'cron', minute='*')
     scheduler.add_job(cleanup_old_logs, 'cron', day_of_week='mon', hour=0, minute=0)
     scheduler.start()
+    start_dashboard_tunnel(wait=False)
+    log_bot_event("Bot polling started")
 
     while True:
         try:

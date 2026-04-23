@@ -26,6 +26,8 @@ class User(Base):
     last_name = Column(String, nullable=True)
     floor = Column(Integer, nullable=True)
     wing = Column(String, nullable=True)
+    is_blocked = Column(Boolean, default=False, nullable=False)
+    is_whitelisted = Column(Boolean, default=True, nullable=False)
 
 
 class DutyQueue(Base):

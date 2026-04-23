@@ -1,0 +1,6 @@
+{
+  "name": "BotObserver Дашборд",
+  "description": "Административная панель для просмотра логов бота общежития, истории пользователей и сбоев.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

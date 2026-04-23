@@ -235,6 +235,8 @@ def process_broadcast_message(message, bot: telebot.TeleBot, sender_chat_id: str
         recipients_query = session.query(User).filter(
             User.chat_id != sender_chat_id,
             User.chat_id.isnot(None),
+            User.is_blocked.is_(False),
+            User.is_whitelisted.is_(True),
         )
 
         scope = target['scope']

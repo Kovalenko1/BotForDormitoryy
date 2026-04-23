@@ -9,6 +9,26 @@ services:
       postgres:
         condition: service_healthy
 
+  web:
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: 8000
+      WEB_SSL_CERTFILE: ""
+      WEB_SSL_KEYFILE: ""
+      WEB_SSL_KEYFILE_PASSWORD: ""
+      WEB_FORCE_HTTPS: "false"
+    command: python run_webapp.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
