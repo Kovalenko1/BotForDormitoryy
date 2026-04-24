@@ -8,6 +8,8 @@ import { ScheduleView } from './components/ScheduleView';
 import { ManagementView } from './components/ManagementView';
 import { ApiError, dashboardApi, getInitialView, initTelegramWebApp, waitForTelegramInitData } from './api';
 import type { DashboardSessionResponse, ViewType } from './types';
+import { StatisticsView } from './views/StatisticsView';
+import styles from './App.module.scss';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>(() => getInitialView());
@@ -99,6 +101,8 @@ export default function App() {
         return <ErrorsView />;
       case 'schedule':
         return <ScheduleView session={session!} />;
+      case 'statistics':
+        return <StatisticsView session={session!} />;
       case 'management':
         return <ManagementView session={session!} onNavigate={handleChangeView} />;
       default:
@@ -108,13 +112,11 @@ export default function App() {
 
   if (!session && !errorMessage) {
     return (
-      <div className="min-h-screen bg-[#080808] text-[#E0E0E0] flex items-center justify-center px-6">
-        <div className="max-w-md w-full bg-[#111111] border border-[#1F1F1F] rounded-3xl p-8 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold mb-3">Портал общежития</p>
-          <h1 className="text-3xl font-serif italic text-white tracking-tight">Подключение dashboard</h1>
-          <p className="mt-4 text-sm text-[#A0A0A0] leading-relaxed">
-            Проверяю доступ и загружаю данные из системы бота.
-          </p>
+      <div className={styles.overlay}>
+        <div className={`surface-panel ${styles.overlayCard}`}>
+          <p className={styles.overlayLabel}>Панель общежития</p>
+          <h1 className={styles.overlayTitle}>Подключаю dashboard</h1>
+          <p className={styles.overlayText}>Проверяю права доступа и загружаю рабочие данные бота.</p>
         </div>
       </div>
     );
@@ -122,33 +124,29 @@ export default function App() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-[#080808] text-[#E0E0E0] flex items-center justify-center px-6">
-        <div className="max-w-lg w-full bg-[#111111] border border-[#2A1616] rounded-3xl p-8 text-center shadow-[0_20px_80px_rgba(0,0,0,0.4)]">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#FF6B57] font-semibold mb-3">Доступ не получен</p>
-          <h1 className="text-3xl font-serif italic text-white tracking-tight">Dashboard недоступен</h1>
-          <p className="mt-4 text-sm text-[#C9C9C9] leading-relaxed">
-            {errorMessage}
-          </p>
-          <p className="mt-4 text-xs text-[#707070] uppercase tracking-[0.2em]">
-            Откройте страницу через Telegram Web App или по персональной ссылке
-          </p>
+      <div className={styles.overlay}>
+        <div className={`surface-panel ${styles.overlayCard}`}>
+          <p className={styles.overlayLabel}>Доступ не подтверждён</p>
+          <h1 className={styles.overlayTitle}>Страница пока закрыта</h1>
+          <p className={styles.overlayText}>{errorMessage}</p>
+          <p className={styles.overlayHint}>Откройте dashboard через Telegram Web App или по своей персональной ссылке</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#080808] text-[#E0E0E0] font-sans selection:bg-[#303030] md:h-screen md:flex-row md:overflow-hidden">
+    <div className={styles.root}>
       <Sidebar currentView={currentView} onChangeView={handleChangeView} session={session} />
 
-      <main className="relative flex-1 overflow-visible md:overflow-y-auto">
-        <div className="relative isolate min-h-full">
+      <main className={styles.content}>
+        <div className={styles.viewHost}>
           {visitedViews
             .filter((view) => session.allowed_views.includes(view))
             .map((view) => (
               <section
                 key={view}
-                className={view === currentView ? 'block min-h-full' : 'hidden min-h-full'}
+                className={view === currentView ? styles.view : styles.hidden}
                 aria-hidden={view === currentView ? undefined : true}
               >
                 {renderView(view)}

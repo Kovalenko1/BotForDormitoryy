@@ -1,4 +1,5 @@
 from calendar import monthrange
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -15,7 +16,7 @@ from config import BOT_TOKEN, NOTIFICATION_HOUR, NOTIFICATION_MINUTE, WEB_FORCE_
 from dashboard_auth import validate_telegram_init_data, verify_dashboard_token
 from database import engine, get_db_session
 from message_audit import ensure_message_audit_schema, install_message_audit
-from models import Base, BotLog, DutyQueue, FailedNotification, FloorNotificationSetting, IncomingUserMessage, OutgoingMessageLog, RoleEnum, User
+from models import Base, BotLog, DutyAssessment, DutyAssessmentGrade, DutyQueue, FailedNotification, FloorNotificationSetting, IncomingUserMessage, OutgoingMessageLog, RoleEnum, User
 from time_utils import MOSCOW_TIMEZONE, moscow_now
 from user_access import ensure_user_access_schema
 from utils import cleanup_expired_keys, generate_access_key, parse_block, parse_floor, parse_notification_time, parse_room, parse_rooms_input
@@ -27,6 +28,12 @@ STAFF_ROLES = {RoleEnum.ADMIN.value, RoleEnum.CHAIRMAN.value, RoleEnum.STAROSTA.
 MANAGE_ROLE_ROLES = {RoleEnum.ADMIN.value, RoleEnum.CHAIRMAN.value}
 FAILED_MESSAGE_STATUS = 'не доставлено'
 DEFAULT_FLOORS = list(range(1, 17))
+DUTY_GRADE_SCORES = {
+    DutyAssessmentGrade.EXCELLENT: 4,
+    DutyAssessmentGrade.GOOD: 3,
+    DutyAssessmentGrade.SATISFACTORY: 2,
+    DutyAssessmentGrade.UNSATISFACTORY: 1,
+}
 
 WEBAPP_BOT = telebot.TeleBot(BOT_TOKEN) if BOT_TOKEN else None
 if WEBAPP_BOT is not None:
@@ -45,6 +52,11 @@ app = FastAPI(
 
 class ReplaceSchedulePayload(BaseModel):
     blocks: list[str] = Field(default_factory=list)
+
+
+class UpsertDutyAssessmentPayload(BaseModel):
+    grade: Literal['excellent', 'good', 'satisfactory', 'unsatisfactory']
+    note: str | None = None
 
 
 class UpdateNotificationPayload(BaseModel):
@@ -107,7 +119,7 @@ class DashboardAccess:
     def allowed_views(self) -> list[str]:
         if self.role == RoleEnum.USER.value:
             return ['schedule'] if self.is_whitelisted else []
-        return ['dashboard', 'general', 'users', 'errors', 'schedule', 'management']
+        return ['dashboard', 'general', 'users', 'errors', 'schedule', 'statistics', 'management']
 
     @property
     def scope_value(self) -> Literal['all', 'floor']:
@@ -121,7 +133,9 @@ class DashboardAccess:
             'can_view_errors': self.is_staff,
             'can_view_user_history': self.is_staff,
             'can_view_schedule': self.is_staff or self.is_whitelisted,
+            'can_view_statistics': self.is_staff,
             'can_manage_schedule': self.role in STAFF_ROLES,
+            'can_manage_duty_assessments': self.role in STAFF_ROLES,
             'can_manage_roles': self.role in MANAGE_ROLE_ROLES,
             'can_manage_user_access': self.role in MANAGE_ROLE_ROLES,
             'can_manage_notifications': self.role in STAFF_ROLES,
@@ -389,6 +403,19 @@ def _queue_payload(item: DutyQueue) -> dict:
     }
 
 
+def _assessment_payload(item: DutyAssessment | None) -> dict | None:
+    if item is None:
+        return None
+
+    return {
+        'grade': item.grade.value,
+        'note': item.note,
+        'created_by_chat_id': item.created_by_chat_id,
+        'created_at': _serialize_datetime(item.created_at),
+        'updated_at': _serialize_datetime(item.updated_at),
+    }
+
+
 def _get_floor_setting(session, floor: int) -> FloorNotificationSetting | None:
     return session.query(FloorNotificationSetting).filter(FloorNotificationSetting.floor == floor).first()
 
@@ -437,6 +464,14 @@ def _get_schedule_start_date(session, floor: int) -> date:
     return today
 
 
+def _get_room_for_date(queue_items: list[DutyQueue], start_date: date, duty_date: date) -> str | None:
+    if not queue_items:
+        return None
+
+    queue_index = (duty_date - start_date).days % len(queue_items)
+    return queue_items[queue_index].room
+
+
 def _resolve_floor_access(access: DashboardAccess, requested_floor: int | None) -> int:
     if access.role in {RoleEnum.ADMIN.value, RoleEnum.CHAIRMAN.value}:
         if requested_floor is None:
@@ -452,10 +487,17 @@ def _resolve_floor_access(access: DashboardAccess, requested_floor: int | None) 
     return access.floor
 
 
-def _build_calendar_days(queue_items: list[DutyQueue], start_date: date, year: int, month: int) -> list[dict]:
+def _build_calendar_days(
+    queue_items: list[DutyQueue],
+    start_date: date,
+    year: int,
+    month: int,
+    assessments_by_date: dict[str, DutyAssessment] | None = None,
+) -> list[dict]:
     _, days_in_month = monthrange(year, month)
     rooms = [item.room for item in queue_items]
     result = []
+    assessments_by_date = assessments_by_date or {}
 
     for day_number in range(1, days_in_month + 1):
         current_date = date(year, month, day_number)
@@ -474,6 +516,7 @@ def _build_calendar_days(queue_items: list[DutyQueue], start_date: date, year: i
             'queue_position': queue_position,
             'is_today': current_date == date.today(),
             'is_current_month': True,
+            'assessment': _assessment_payload(assessments_by_date.get(current_date.isoformat())),
         })
 
     return result
@@ -859,18 +902,30 @@ def get_duty_calendar(
         ).order_by(DutyQueue.position.asc()).all()
         setting = _get_floor_setting(session, target_floor)
         schedule_start_date = _get_schedule_start_date(session, target_floor)
+        month_start = date(year_value, month_value, 1)
+        month_end = date(year_value, month_value, monthrange(year_value, month_value)[1])
+        assessments = session.query(DutyAssessment).filter(
+            DutyAssessment.floor == target_floor,
+            DutyAssessment.duty_date >= month_start,
+            DutyAssessment.duty_date <= month_end,
+        ).all()
+        assessments_by_date = {
+            item.duty_date.isoformat(): item
+            for item in assessments
+        }
 
     return {
         'floor': target_floor,
         'year': year_value,
         'month': month_value,
         'can_edit': access.permissions['can_manage_schedule'],
+        'can_assess': access.permissions['can_manage_duty_assessments'],
         'scope': access.scope_value,
         'accessible_floors': access.accessible_floors,
         'start_date': schedule_start_date.isoformat(),
         'queue': [_queue_payload(item) for item in queue_items],
         'notification_setting': _notification_setting_payload(setting, target_floor),
-        'days': _build_calendar_days(queue_items, schedule_start_date, year_value, month_value),
+        'days': _build_calendar_days(queue_items, schedule_start_date, year_value, month_value, assessments_by_date),
     }
 
 
@@ -889,6 +944,155 @@ def replace_duty_schedule(floor: int, payload: ReplaceSchedulePayload, request: 
     )
 
     return {'floor': target_floor, 'blocks': normalized_blocks}
+
+
+@app.put('/api/duty/assessments/{floor}/{duty_date}')
+def upsert_duty_assessment(floor: int, duty_date: str, payload: UpsertDutyAssessmentPayload, request: Request):
+    access = _require_access(request, STAFF_ROLES)
+    target_floor = _resolve_floor_access(access, floor)
+
+    try:
+        parsed_date = date.fromisoformat(duty_date)
+        grade = DutyAssessmentGrade(payload.grade)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail='Некорректная дата или оценка.') from error
+
+    note = payload.note.strip() if payload.note else None
+
+    with next(get_db_session()) as session:
+        queue_items = session.query(DutyQueue).filter(
+            DutyQueue.floor == target_floor
+        ).order_by(DutyQueue.position.asc()).all()
+        schedule_start_date = _get_schedule_start_date(session, target_floor)
+        room = _get_room_for_date(queue_items, schedule_start_date, parsed_date)
+        if room is None:
+            raise HTTPException(status_code=400, detail='Сначала настройте очередь дежурств для этого этажа.')
+
+        assessment = session.query(DutyAssessment).filter(
+            DutyAssessment.floor == target_floor,
+            DutyAssessment.duty_date == parsed_date,
+        ).first()
+        timestamp = moscow_now()
+
+        if assessment is None:
+            assessment = DutyAssessment(
+                floor=target_floor,
+                room=room,
+                duty_date=parsed_date,
+                grade=grade,
+                note=note,
+                created_by_chat_id=access.chat_id,
+                created_at=timestamp,
+                updated_at=timestamp,
+            )
+            session.add(assessment)
+        else:
+            assessment.room = room
+            assessment.grade = grade
+            assessment.note = note
+            assessment.created_by_chat_id = access.chat_id
+            assessment.updated_at = timestamp
+
+        session.commit()
+        session.refresh(assessment)
+
+    log_bot_event(
+        f"Dashboard set duty assessment for floor {target_floor} on {parsed_date.isoformat()} to {grade.value}",
+        user_id=access.chat_id,
+    )
+
+    return {
+        'floor': target_floor,
+        'duty_date': parsed_date.isoformat(),
+        'room': assessment.room,
+        'assessment': _assessment_payload(assessment),
+    }
+
+
+@app.get('/api/duty/stats')
+def get_duty_stats(
+    request: Request,
+    floor: int | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+):
+    access = _require_access(request, STAFF_ROLES)
+    target_floor = _resolve_floor_access(access, floor)
+
+    try:
+        start_value = date.fromisoformat(start_date) if start_date else date.today() - timedelta(days=89)
+        end_value = date.fromisoformat(end_date) if end_date else date.today()
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail='Неверный формат периода статистики.') from error
+
+    if start_value > end_value:
+        raise HTTPException(status_code=400, detail='Начало периода не может быть позже его окончания.')
+
+    with next(get_db_session()) as session:
+        assessments = session.query(DutyAssessment).filter(
+            DutyAssessment.floor == target_floor,
+            DutyAssessment.duty_date >= start_value,
+            DutyAssessment.duty_date <= end_value,
+        ).order_by(DutyAssessment.duty_date.asc()).all()
+
+    grouped: dict[str, dict] = {}
+    summary_counts = defaultdict(int)
+    total_score = 0
+
+    for assessment in assessments:
+        if assessment.room not in grouped:
+            grouped[assessment.room] = {
+                'room': assessment.room,
+                'assessment_count': 0,
+                'score_total': 0,
+                'grade_counts': {
+                    'excellent': 0,
+                    'good': 0,
+                    'satisfactory': 0,
+                    'unsatisfactory': 0,
+                },
+                'latest_assessment_at': None,
+            }
+
+        item = grouped[assessment.room]
+        item['assessment_count'] += 1
+        item['score_total'] += DUTY_GRADE_SCORES[assessment.grade]
+        item['grade_counts'][assessment.grade.value] += 1
+        item['latest_assessment_at'] = assessment.duty_date.isoformat()
+
+        summary_counts[assessment.grade.value] += 1
+        total_score += DUTY_GRADE_SCORES[assessment.grade]
+
+    items = []
+    for room, item in grouped.items():
+        average_score = item['score_total'] / item['assessment_count'] if item['assessment_count'] else 0
+        items.append({
+            'room': room,
+            'assessment_count': item['assessment_count'],
+            'average_score': round(average_score, 2),
+            'average_percent': round((average_score / 4) * 100, 1) if item['assessment_count'] else 0,
+            'grade_counts': item['grade_counts'],
+            'latest_assessment_at': item['latest_assessment_at'],
+        })
+
+    items.sort(key=lambda item: (-item['average_score'], -item['assessment_count'], item['room']))
+
+    return {
+        'floor': target_floor,
+        'start_date': start_value.isoformat(),
+        'end_date': end_value.isoformat(),
+        'items': items,
+        'summary': {
+            'assessment_count': len(assessments),
+            'average_score': round(total_score / len(assessments), 2) if assessments else 0,
+            'grade_counts': {
+                'excellent': summary_counts['excellent'],
+                'good': summary_counts['good'],
+                'satisfactory': summary_counts['satisfactory'],
+                'unsatisfactory': summary_counts['unsatisfactory'],
+            },
+        },
+    }
 
 
 @app.get('/api/notification-settings')

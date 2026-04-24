@@ -1,0 +1,673 @@
+.page {
+  display: grid;
+  gap: 14px;
+}
+
+.hero {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(123, 241, 161, 0.18), transparent 32%),
+    radial-gradient(circle at 84% 18%, rgba(214, 255, 129, 0.1), transparent 18%),
+    linear-gradient(135deg, rgba(6, 12, 9, 0.98), rgba(9, 17, 12, 0.94));
+}
+
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-end;
+}
+
+.heroMetrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.heroMetric {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.metricLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: clamp(1.1rem, 1.8vw, 1.55rem);
+  font-weight: 800;
+}
+
+.metricCopy {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tabsShell {
+  padding: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.tabButton {
+  min-width: max-content;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.tabButton:hover {
+  background: rgba(10, 18, 13, 0.78);
+  border-color: rgba(122, 255, 167, 0.14);
+  color: var(--text-primary);
+}
+
+.tabButtonActive {
+  background: linear-gradient(135deg, #e5ffed 0%, #8df4b3 100%);
+  color: #041008;
+}
+
+.tabTitle {
+  font-weight: 800;
+}
+
+.tabHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.78;
+}
+
+.rolesGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roleColumn {
+  display: grid;
+  gap: 10px;
+}
+
+.roleHeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.roleCard {
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(111, 166, 127, 0.14);
+  background: rgba(8, 14, 10, 0.9);
+}
+
+.roleCardAdmin {
+  border-color: rgba(214, 255, 129, 0.18);
+  background: linear-gradient(180deg, rgba(20, 28, 12, 0.94), rgba(9, 14, 10, 0.94));
+}
+
+.roleCardChairman {
+  border-color: rgba(122, 255, 167, 0.16);
+  background: linear-gradient(180deg, rgba(10, 21, 14, 0.94), rgba(8, 14, 10, 0.94));
+}
+
+.roleCardStarosta {
+  border-color: rgba(145, 217, 179, 0.16);
+  background: linear-gradient(180deg, rgba(12, 22, 16, 0.94), rgba(8, 14, 10, 0.94));
+}
+
+.roleHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.roleIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.textBreak {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.roleName {
+  margin: 0;
+  font-weight: 800;
+}
+
+.roleMeta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.roleLocation {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.statusPill {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.resetButton {
+  margin-top: 10px;
+}
+
+.residentCard {
+  padding: 14px;
+}
+
+.residentHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.residentIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.residentName {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.residentId {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.residentBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.residentMeta {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(111, 166, 127, 0.12);
+  background: rgba(6, 11, 8, 0.84);
+  color: var(--text-secondary);
+}
+
+.residentMetaLine {
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.splitLayout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+}
+
+.accessLayout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sectionCard {
+  padding: 18px;
+}
+
+.sectionCardSoft {
+  padding: 18px;
+  border-radius: 28px;
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(9, 16, 11, 0.96), rgba(6, 11, 8, 0.96));
+  box-shadow: var(--shadow-card);
+}
+
+.sectionCardDanger {
+  border-color: rgba(255, 141, 130, 0.18);
+  background: linear-gradient(180deg, rgba(20, 10, 10, 0.96), rgba(11, 7, 7, 0.96));
+}
+
+.sectionHeaderBlock {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sectionLead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionIcon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(122, 255, 167, 0.16);
+  background: rgba(8, 15, 11, 0.88);
+  color: var(--accent-green);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.sectionCopy {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.primaryActions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.generatedKeys {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.keyCard {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(7, 13, 10, 0.9);
+}
+
+.keyLabel {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.keyValue {
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 1rem;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.sectionError {
+  margin: 0 0 14px;
+  color: #ffb4aa;
+  font-size: 13px;
+}
+
+.sectionLoading {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.emptyState {
+  border: 1px dashed rgba(111, 166, 127, 0.18);
+  border-radius: 20px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  background: rgba(7, 13, 10, 0.74);
+}
+
+.sectionBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(7, 13, 10, 0.8);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.sectionBadgeAccent {
+  border-color: rgba(122, 255, 167, 0.2);
+  color: var(--accent-green);
+}
+
+.sectionBadgeMuted {
+  color: var(--text-secondary);
+}
+
+.sectionBadgeDanger {
+  border-color: rgba(255, 141, 130, 0.22);
+  background: rgba(28, 10, 10, 0.8);
+  color: #ffb4aa;
+}
+
+.sectionHeadResponsive {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filterGridPrimary {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.filterGridSecondary {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.searchWide {
+  grid-column: span 2;
+}
+
+.directoryGrid {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roleBadge {
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid rgba(111, 166, 127, 0.16);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.actionPanel {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.actionGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.actionButton {
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  padding: 10px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+}
+
+.actionButtonAccent {
+  border-color: rgba(122, 255, 167, 0.18);
+  background: rgba(13, 27, 18, 0.92);
+  color: var(--accent-green);
+}
+
+.actionButtonNeutral {
+  background: rgba(8, 14, 10, 0.92);
+  color: var(--text-secondary);
+}
+
+.actionButtonDanger {
+  border-color: rgba(255, 141, 130, 0.2);
+  background: rgba(31, 10, 10, 0.92);
+  color: #ffb4aa;
+}
+
+.actionButtonDangerSoft {
+  border-color: rgba(255, 141, 130, 0.16);
+  background: rgba(22, 9, 9, 0.86);
+  color: #ffd5ce;
+}
+
+.listGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.listItem {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(8, 14, 10, 0.86);
+}
+
+.roleTagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.listItemMeta {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.listActions {
+  display: grid;
+  gap: 8px;
+}
+
+.dangerCard {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 141, 130, 0.18);
+  background: rgba(18, 8, 8, 0.88);
+}
+
+.dangerMeta {
+  margin-top: 6px;
+  color: #d2b0aa;
+  font-size: 13px;
+}
+
+.notificationGrid {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.notificationCard {
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(10, 17, 12, 0.96), rgba(7, 13, 10, 0.92));
+}
+
+.notificationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notificationTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.notificationMeta {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.notificationControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeField {
+  width: 108px;
+}
+
+.broadcastGrid {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.broadcastTextarea {
+  margin-top: 14px;
+  min-height: 144px;
+}
+
+.sectionSuccess {
+  margin-top: 14px;
+  color: var(--accent-green);
+  font-size: 13px;
+}
+
+.submitRow {
+  margin-top: 18px;
+}
+
+@media (max-width: 1260px) {
+  .heroMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filterGridPrimary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filterGridSecondary,
+  .broadcastGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .directoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .splitLayout,
+  .accessLayout,
+  .rolesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .notificationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero {
+    padding: 18px 16px;
+  }
+
+  .heroTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  .tabsShell,
+  .sectionCard,
+  .sectionCardSoft {
+    padding: 16px;
+  }
+
+  .sectionHeaderBlock,
+  .sectionLead,
+  .notificationRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabButton {
+    min-width: 132px;
+    padding: 12px;
+  }
+
+  .filterGridPrimary,
+  .filterGridSecondary,
+  .directoryGrid,
+  .actionGrid,
+  .broadcastGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .searchWide {
+    grid-column: auto;
+  }
+
+  .primaryActions,
+  .notificationControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timeField {
+    width: 100%;
+  }
+}

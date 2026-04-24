@@ -1,0 +1,538 @@
+.page {
+  display: grid;
+  gap: 14px;
+}
+
+.hero {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(123, 241, 161, 0.18), transparent 32%),
+    radial-gradient(circle at 84% 18%, rgba(214, 255, 129, 0.1), transparent 18%),
+    linear-gradient(135deg, rgba(6, 12, 9, 0.98), rgba(9, 17, 12, 0.94));
+}
+
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-end;
+}
+
+.heroControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.monthSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: rgba(16, 28, 41, 0.9);
+}
+
+.monthTitle {
+  min-width: 150px;
+  text-align: center;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.circleButton {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.circleButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(143, 196, 255, 0.22);
+  background: rgba(23, 37, 52, 0.86);
+}
+
+.metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metricCard {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.metricLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: clamp(1.05rem, 1.8vw, 1.55rem);
+  font-weight: 800;
+}
+
+.metricNote {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.9fr) minmax(300px, 0.95fr);
+}
+
+.calendarSection,
+.sidebarSection {
+  padding: 18px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.sectionCopy {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.desktopCalendar {
+  overflow: visible;
+}
+
+.weekHeader {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+
+.weekday {
+  padding: 8px 6px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.calendarGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.emptyCell {
+  min-height: 150px;
+  border-radius: 18px;
+  border: 1px dashed rgba(116, 142, 173, 0.18);
+  background: rgba(11, 18, 27, 0.5);
+}
+
+.daySlot {
+  position: relative;
+}
+
+.daySlotActive {
+  z-index: 8;
+}
+
+.dayCard {
+  width: 100%;
+  min-height: 150px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(116, 142, 173, 0.14);
+  background: rgba(15, 24, 35, 0.86);
+  color: var(--text-primary);
+}
+
+.dayButton {
+  cursor: pointer;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.dayButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(143, 196, 255, 0.24);
+  background: rgba(17, 29, 44, 0.92);
+}
+
+.dayToday {
+  border-color: rgba(145, 217, 179, 0.28);
+  background: linear-gradient(180deg, rgba(18, 34, 25, 0.92), rgba(15, 24, 35, 0.92));
+}
+
+.daySelected {
+  border-color: rgba(143, 196, 255, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(143, 196, 255, 0.12);
+}
+
+.dayHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.dayNumber {
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.queueBadge {
+  border-radius: 999px;
+  padding: 4px 8px;
+  border: 1px solid rgba(124, 150, 180, 0.18);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dayBody {
+  display: grid;
+  gap: 10px;
+}
+
+.roomLabel {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.roomValue {
+  font-size: clamp(1rem, 1.3vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.emptyText {
+  color: var(--text-dim);
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.assessmentPill {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.dayMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, calc(100vw - 48px));
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(122, 255, 167, 0.18);
+  background: rgba(5, 10, 8, 0.97);
+  box-shadow: 0 18px 44px rgba(4, 10, 19, 0.34);
+}
+
+.dayMenuMobile {
+  position: static;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.dayMenuHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.dayMenuDismiss {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(143, 196, 255, 0.18);
+  background: rgba(15, 24, 35, 0.92);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.dayMenuField {
+  display: grid;
+  gap: 8px;
+}
+
+.mobileList {
+  display: none;
+}
+
+.mobileSlot {
+  display: grid;
+  gap: 8px;
+}
+
+.mobileSlotActive {
+  z-index: 2;
+}
+
+.sidebar {
+  display: grid;
+  gap: 14px;
+}
+
+.queueList,
+.upcomingList {
+  display: grid;
+  gap: 10px;
+}
+
+.queueItem,
+.upcomingItem {
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(116, 142, 173, 0.14);
+  background: rgba(14, 22, 34, 0.86);
+}
+
+.queueItemDraggable {
+  cursor: grab;
+}
+
+.queueItemDragging {
+  opacity: 0.5;
+}
+
+.queueItemTarget {
+  border-color: rgba(145, 217, 179, 0.28);
+  background: rgba(19, 35, 29, 0.88);
+}
+
+.queueRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.queueHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dragHandle {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(143, 196, 255, 0.12);
+  background: rgba(15, 24, 35, 0.92);
+  color: var(--text-muted);
+}
+
+.queueTitle {
+  margin: 6px 0 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.queueActions {
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  gap: 8px;
+}
+
+.addRow {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 14px;
+}
+
+.saveRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.selectedLabel {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.selectedTitle {
+  margin: 6px 0 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.selectedMeta {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gradeGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gradeButton {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(14, 22, 34, 0.86);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.gradeButton:hover {
+  transform: translateY(-1px);
+}
+
+.gradeActive {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.gradeLabel {
+  font-weight: 800;
+}
+
+.gradeScore {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.assessmentMeta {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1260px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero,
+  .calendarSection,
+  .sidebarSection {
+    padding: 18px 16px;
+  }
+
+  .heroTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroControls,
+  .addRow,
+  .gradeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .desktopCalendar {
+    display: none;
+  }
+
+  .mobileList {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobileCard {
+    width: 100%;
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(111, 166, 127, 0.14);
+    background:
+      radial-gradient(circle at top left, rgba(123, 241, 161, 0.1), transparent 34%),
+      rgba(8, 14, 10, 0.92);
+  }
+
+  .dayMenu {
+    position: static;
+    width: 100%;
+  }
+
+  .monthTitle {
+    min-width: 0;
+  }
+}

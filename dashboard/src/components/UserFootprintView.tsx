@@ -172,7 +172,7 @@ export function UserFootprintView() {
               </div>
             </div>
             <div className="px-3 py-1.5 bg-[#1F1F1F] border border-[#303030] rounded text-xs text-[#E0E0E0] transition-colors">
-              Реальные данные журнала
+              Живой журнал действий
             </div>
           </div>
         </header>
@@ -192,7 +192,7 @@ export function UserFootprintView() {
             {!footprintLoading && userLogs.length === 0 ? (
               <div className="text-center py-20 text-[#505050]">
                 <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p>История чата для данного пользователя не найдена.</p>
+                <p>Для этого пользователя пока нет сохранённой истории.</p>
               </div>
             ) : (
               userLogs.map((log) => {
@@ -268,7 +268,7 @@ export function UserFootprintView() {
     <div className="mx-auto max-w-5xl space-y-8 px-4 pb-8 pt-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold mb-1">Выберите пользователя для просмотра истории.</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold mb-1">Поиск по людям и их истории взаимодействий.</p>
           <h2 className="text-3xl font-serif italic text-white tracking-tight">История пользователей</h2>
         </div>
 
@@ -276,7 +276,7 @@ export function UserFootprintView() {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#505050]" />
           <input
             type="text"
-            placeholder="Поиск пользователей..."
+            placeholder="Имя, username, chat_id"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="w-full bg-[#111111] border border-[#1F1F1F] rounded-full py-2 pl-10 pr-4 text-sm text-[#E0E0E0] placeholder:text-[#505050] focus:outline-none focus:border-[#303030]"
@@ -324,7 +324,7 @@ export function UserFootprintView() {
         ))}
         {!usersLoading && users.length === 0 && (
           <div className="col-span-full py-20 text-center text-[#505050]">
-            По вашему запросу пользователей не найдено.
+            По этому запросу никого не нашлось.
           </div>
         )}
       </div>

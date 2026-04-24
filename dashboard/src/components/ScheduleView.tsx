@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
   ChevronDown,
@@ -6,12 +6,17 @@ import {
   ChevronRight,
   ChevronUp,
   Clock3,
+  GripVertical,
   Plus,
   Save,
   Trash2,
+  X,
 } from 'lucide-react';
 import { ApiError, dashboardApi } from '../api';
-import type { DashboardSessionResponse, DutyCalendarDay, DutyCalendarResponse } from '../types';
+import { DUTY_GRADE_ORDER, getDutyGradeMeta } from '../lib/duty';
+import { formatMoscowDateTime } from '../lib/time';
+import type { DashboardSessionResponse, DutyAssessmentGrade, DutyCalendarDay, DutyCalendarResponse } from '../types';
+import styles from './ScheduleView.module.scss';
 
 interface ScheduleViewProps {
   session: DashboardSessionResponse;
@@ -83,6 +88,14 @@ export function ScheduleView({ session }: ScheduleViewProps) {
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [assessmentGrade, setAssessmentGrade] = useState<DutyAssessmentGrade>('good');
+  const [assessmentNote, setAssessmentNote] = useState('');
+  const [assessmentSaving, setAssessmentSaving] = useState(false);
+  const [assessmentMessage, setAssessmentMessage] = useState('');
+  const [assessmentError, setAssessmentError] = useState('');
 
   useEffect(() => {
     if (selectedFloor === null || !session.accessible_floors.includes(selectedFloor)) {
@@ -129,6 +142,40 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     };
   }, [selectedFloor, year, month, reloadToken]);
 
+  useEffect(() => {
+    if (!data || !selectedDate) {
+      return;
+    }
+
+    const existingDay = data.days.find((day) => day.date === selectedDate && day.room);
+    if (!existingDay) {
+      setSelectedDate(null);
+    }
+  }, [data, selectedDate]);
+
+  const leadingEmptyCells = data?.days[0]?.weekday ?? 0;
+  const upcomingDays = useMemo(() => (data ? getUpcomingDays(data.days) : []), [data]);
+  const dutyToday = useMemo(() => (data?.days.find((day) => day.is_today && day.room) ?? upcomingDays[0] ?? null), [data, upcomingDays]);
+  const selectedDay = useMemo(
+    () => data?.days.find((day) => day.date === selectedDate && day.room) ?? null,
+    [data, selectedDate],
+  );
+
+  useEffect(() => {
+    if (!selectedDay) {
+      setAssessmentGrade('good');
+      setAssessmentNote('');
+      setAssessmentMessage('');
+      setAssessmentError('');
+      return;
+    }
+
+    setAssessmentGrade(selectedDay.assessment?.grade ?? 'good');
+    setAssessmentNote(selectedDay.assessment?.note ?? '');
+    setAssessmentMessage('');
+    setAssessmentError('');
+  }, [selectedDay]);
+
   const changeMonth = (delta: number) => {
     const current = new Date(year, month - 1 + delta, 1);
     setYear(current.getFullYear());
@@ -145,17 +192,27 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     setNewBlock('');
   };
 
-  const moveDraftItem = (index: number, direction: -1 | 1) => {
+  const reorderDraftItems = (fromIndex: number, toIndex: number) => {
     setQueueDraft((current) => {
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= current.length) {
+      if (
+        fromIndex === toIndex
+        || fromIndex < 0
+        || toIndex < 0
+        || fromIndex >= current.length
+        || toIndex >= current.length
+      ) {
         return current;
       }
 
       const next = [...current];
-      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
       return next;
     });
+  };
+
+  const moveDraftItem = (index: number, direction: -1 | 1) => {
+    reorderDraftItems(index, index + direction);
   };
 
   const removeDraftItem = (index: number) => {
@@ -173,7 +230,7 @@ export function ScheduleView({ session }: ScheduleViewProps) {
 
     try {
       await dashboardApi.replaceDutySchedule(selectedFloor, queueDraft);
-      setSaveMessage('График сохранён.');
+      setSaveMessage('Очередь сохранена.');
       setReloadToken((value) => value + 1);
     } catch (error) {
       setSaveError(error instanceof ApiError ? error.message : 'Не удалось сохранить график.');
@@ -182,35 +239,182 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     }
   };
 
+  const saveAssessment = async () => {
+    if (!selectedDay || selectedFloor === null) {
+      return;
+    }
+
+    setAssessmentSaving(true);
+    setAssessmentMessage('');
+    setAssessmentError('');
+
+    try {
+      await dashboardApi.upsertDutyAssessment(
+        selectedFloor,
+        selectedDay.date,
+        assessmentGrade,
+        assessmentNote.trim() || undefined,
+      );
+      setAssessmentMessage('Оценка сохранена и сразу попадёт в статистику.');
+      setReloadToken((value) => value + 1);
+    } catch (error) {
+      setAssessmentError(error instanceof ApiError ? error.message : 'Не удалось сохранить оценку дежурства.');
+    } finally {
+      setAssessmentSaving(false);
+    }
+  };
+
+  const toggleDayMenu = (day: DutyCalendarDay) => {
+    if (!day.room) {
+      return;
+    }
+
+    setSelectedDate((current) => (current === day.date ? null : day.date));
+  };
+
+  const handleQueueDragStart = (event: React.DragEvent<HTMLElement>, index: number) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(index));
+    setDraggedIndex(index);
+    setDragOverIndex(index);
+  };
+
+  const handleQueueDragOver = (event: React.DragEvent<HTMLElement>, index: number) => {
+    event.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) {
+      return;
+    }
+
+    setDragOverIndex(index);
+  };
+
+  const handleQueueDrop = (event: React.DragEvent<HTMLElement>, index: number) => {
+    event.preventDefault();
+    if (draggedIndex === null) {
+      return;
+    }
+
+    reorderDraftItems(draggedIndex, index);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleQueueDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const renderDayMenu = (day: DutyCalendarDay, compact = false) => {
+    if (!selectedDay || selectedDay.date !== day.date) {
+      return null;
+    }
+
+    const selectedAssessment = selectedDay.assessment ? getDutyGradeMeta(selectedDay.assessment.grade) : null;
+
+    return (
+      <div
+        className={[styles.dayMenu, compact ? styles.dayMenuMobile : ''].join(' ').trim()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.dayMenuHeader}>
+          <div>
+            <div className={styles.selectedLabel}>День дежурства</div>
+            <h3 className={styles.selectedTitle}>Блок {selectedDay.room}</h3>
+            <p className={styles.selectedMeta}>
+              {formatMobileDayLabel(selectedDay.date)}
+              {selectedDay.assessment ? ` · Последнее обновление: ${formatMoscowDateTime(selectedDay.assessment.updated_at)}` : ''}
+            </p>
+          </div>
+
+          <button type="button" className={styles.dayMenuDismiss} onClick={() => setSelectedDate(null)} aria-label="Закрыть меню">
+            <X size={14} />
+          </button>
+        </div>
+
+        {data?.can_assess ? (
+          <>
+            <div className={styles.gradeGrid}>
+              {DUTY_GRADE_ORDER.map((grade) => {
+                const meta = getDutyGradeMeta(grade);
+                const isActive = assessmentGrade === grade;
+                return (
+                  <button
+                    key={grade}
+                    type="button"
+                    className={[styles.gradeButton, isActive ? styles.gradeActive : ''].join(' ').trim()}
+                    onClick={() => setAssessmentGrade(grade)}
+                    style={{ borderColor: isActive ? meta.border : undefined, background: isActive ? meta.surface : undefined }}
+                  >
+                    <span className={styles.gradeLabel} style={{ color: meta.color }}>{meta.label}</span>
+                    <span className={styles.gradeScore}>{meta.score} из 4</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className={styles.dayMenuField}>
+              <span className="badge">Комментарий</span>
+              <textarea
+                className="textarea"
+                value={assessmentNote}
+                onChange={(event) => setAssessmentNote(event.target.value)}
+                placeholder="Коротко зафиксируйте, что повлияло на оценку."
+              />
+            </label>
+
+            {selectedAssessment ? (
+              <div className={styles.assessmentMeta}>
+                Текущая оценка: {selectedAssessment.label}
+                {selectedDay.assessment?.note ? ` · ${selectedDay.assessment.note}` : ''}
+              </div>
+            ) : null}
+
+            {assessmentMessage ? <div className="state-message">{assessmentMessage}</div> : null}
+            {assessmentError ? <div className="state-message error">{assessmentError}</div> : null}
+
+            <button type="button" className="button" onClick={saveAssessment} disabled={assessmentSaving}>
+              <Save size={16} /> {assessmentSaving ? 'Сохраняю...' : 'Сохранить оценку'}
+            </button>
+          </>
+        ) : (
+          <div className={styles.assessmentMeta}>
+            {selectedAssessment
+              ? `Оценка: ${selectedAssessment.label}${selectedDay.assessment?.note ? ` · ${selectedDay.assessment.note}` : ''}`
+              : 'Для этого дня оценка пока не выставлена.'}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (session.accessible_floors.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl px-4 pb-8 pt-4 sm:px-6 lg:px-8">
-        <div className="rounded-[28px] border border-[#212833] bg-[#0b0d11] p-6 text-[#e2e7ee]">
-          Сначала укажите комнату в боте, чтобы получить доступ к графику своего этажа.
-        </div>
+      <div className={styles.page}>
+        <section className={`surface-panel ${styles.sidebarSection}`}>
+          Сначала укажите комнату в боте, чтобы dashboard смог привязать вас к нужному этажу и открыть календарь дежурств.
+        </section>
       </div>
     );
   }
 
-  const leadingEmptyCells = data?.days[0]?.weekday ?? 0;
-  const upcomingDays = data ? getUpcomingDays(data.days) : [];
-  const dutyToday = data?.days.find((day) => day.is_today && day.room) ?? upcomingDays[0] ?? null;
-
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 pb-8 pt-4 sm:space-y-6 sm:px-6 lg:px-8">
-      <header className="overflow-hidden rounded-[32px] border border-[#222a34] bg-[radial-gradient(circle_at_top_left,_rgba(138,194,255,0.16),_transparent_38%),linear-gradient(135deg,#0c1017_0%,#101724_48%,#0b0d12_100%)] p-5 sm:p-6 lg:p-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className={styles.page}>
+      <header className={`surface-panel ${styles.hero}`}>
+        <div className={styles.heroTop}>
           <div className="max-w-2xl">
-            <p className="text-[11px] uppercase tracking-[0.34em] text-[#8fb6ef]">Календарь дежурств</p>
-            <h2 className="mt-3 text-3xl font-serif italic tracking-tight text-white sm:text-4xl">График этажа</h2>
+            <p className="eyebrow">Календарь дежурств</p>
+            <h2 className="page-title">Очередь, оценки и ближайшие смены</h2>
+            <p className="page-copy">
+              Календарь показывает, кто дежурит в конкретный день, а staff может открыть по дате компактное меню и сразу зафиксировать результат.
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className={styles.heroControls}>
             {session.accessible_floors.length > 1 && (
               <select
+                className="select"
                 value={selectedFloor ?? ''}
                 onChange={(event) => setSelectedFloor(Number(event.target.value))}
-                className="rounded-full border border-[#303743] bg-[#121824] px-4 py-2.5 text-sm text-[#eef3f8] focus:border-[#546173] focus:outline-none"
               >
                 {session.accessible_floors.map((floor) => (
                   <option key={floor} value={floor}>Этаж {floor}</option>
@@ -218,201 +422,234 @@ export function ScheduleView({ session }: ScheduleViewProps) {
               </select>
             )}
 
-            <div className="flex items-center gap-2 rounded-full border border-[#303743] bg-[#121824] px-2 py-2">
-              <button onClick={() => changeMonth(-1)} className="flex h-9 w-9 items-center justify-center rounded-full text-[#dce4f0] transition hover:bg-[#1b2230]">
-                <ChevronLeft className="h-4 w-4" />
+            <div className={styles.monthSwitch}>
+              <button onClick={() => changeMonth(-1)} className={styles.circleButton}>
+                <ChevronLeft size={16} />
               </button>
-              <div className="min-w-40 text-center text-sm capitalize text-[#eef3f8]">{formatMonthTitle(year, month)}</div>
-              <button onClick={() => changeMonth(1)} className="flex h-9 w-9 items-center justify-center rounded-full text-[#dce4f0] transition hover:bg-[#1b2230]">
-                <ChevronRight className="h-4 w-4" />
+              <div className={styles.monthTitle}>{formatMonthTitle(year, month)}</div>
+              <button onClick={() => changeMonth(1)} className={styles.circleButton}>
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
         </div>
 
         {data && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-3xl border border-[#263141] bg-[#121824]/90 p-4">
-              <div className="flex items-center gap-2 text-[#9dc8ff]"><CalendarDays className="h-4 w-4" /> <span className="text-xs uppercase tracking-[0.24em]">Этаж</span></div>
-              <div className="mt-3 text-3xl font-semibold text-white">{data.floor}</div>
-              <div className="mt-1 text-sm text-[#8d93a0]">доступный контур: {data.scope === 'all' ? 'все этажи' : 'один этаж'}</div>
+          <div className={styles.metrics}>
+            <div className={`surface-panel-soft ${styles.metricCard}`}>
+              <div className={styles.metricLabel}><CalendarDays size={14} /> Этаж</div>
+              <div className={styles.metricValue}>{data.floor}</div>
+              <div className={styles.metricNote}>{data.scope === 'all' ? 'Можно переключаться между доступными этажами.' : 'Вы работаете только в пределах своего этажа.'}</div>
             </div>
-            <div className="rounded-3xl border border-[#284139] bg-[#122019]/90 p-4">
-              <div className="flex items-center gap-2 text-[#93ddb1]"><Clock3 className="h-4 w-4" /> <span className="text-xs uppercase tracking-[0.24em]">Старт цикла</span></div>
-              <div className="mt-3 text-lg font-semibold text-white">{data.start_date}</div>
-              <div className="mt-1 text-sm text-[#8d93a0]">с этой даты очередь считает следующий блок</div>
+            <div className={`surface-panel-soft ${styles.metricCard}`}>
+              <div className={styles.metricLabel}><Clock3 size={14} /> Старт цикла</div>
+              <div className={styles.metricValue}>{data.start_date}</div>
+              <div className={styles.metricNote}>От этой точки считается очерёдность блоков.</div>
             </div>
-            <div className="rounded-3xl border border-[#2c3240] bg-[#121720]/90 p-4">
-              <div className="flex items-center gap-2 text-[#d7dfeb]"><Clock3 className="h-4 w-4" /> <span className="text-xs uppercase tracking-[0.24em]">Уведомление</span></div>
-              <div className="mt-3 text-3xl font-semibold text-white">
+            <div className={`surface-panel-soft ${styles.metricCard}`}>
+              <div className={styles.metricLabel}><Clock3 size={14} /> Напоминание</div>
+              <div className={styles.metricValue}>
                 {formatNotificationTime(data.notification_setting.notification_hour, data.notification_setting.notification_minute)}
               </div>
-              <div className="mt-1 text-sm text-[#8d93a0]">время отправки напоминания по этажу</div>
+              <div className={styles.metricNote}>В это время бот напоминает про дежурство по этажу.</div>
             </div>
-            <div className="rounded-3xl border border-[#373227] bg-[#1b1712]/90 p-4">
-              <div className="flex items-center gap-2 text-[#ffd892]"><CalendarDays className="h-4 w-4" /> <span className="text-xs uppercase tracking-[0.24em]">Ближайший блок</span></div>
-              <div className="mt-3 text-3xl font-semibold text-white">{dutyToday?.room ?? '—'}</div>
-              <div className="mt-1 text-sm text-[#8d93a0]">{dutyToday ? dutyToday.date : 'очередь пока не задана'}</div>
+            <div className={`surface-panel-soft ${styles.metricCard}`}>
+              <div className={styles.metricLabel}><CalendarDays size={14} /> Ближайший блок</div>
+              <div className={styles.metricValue}>{dutyToday?.room ?? '—'}</div>
+              <div className={styles.metricNote}>{dutyToday ? `Следующее дежурство: ${dutyToday.date}` : 'Очередь ещё не сформирована.'}</div>
             </div>
           </div>
         )}
       </header>
 
       {errorMessage && (
-        <div className="rounded-[28px] border border-[#6d3a37] bg-[#241615] p-4 text-[#ffc4bc]">
-          {errorMessage}
-        </div>
+        <div className="state-message error">{errorMessage}</div>
       )}
 
       {loading && (
-        <div className="rounded-[28px] border border-[#212833] bg-[#0b0d11] p-5 text-sm text-[#8d93a0]">
-          Загружаю график дежурств...
-        </div>
+        <section className={`surface-panel ${styles.sidebarSection}`}>Загружаю календарь и очередь блоков...</section>
       )}
 
       {data && (
-        <div className="grid gap-5 xl:grid-cols-[1.5fr_0.95fr]">
-          <section className="order-2 rounded-[30px] border border-[#212833] bg-[#0b0d11] p-5 sm:p-6 xl:order-1">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className={styles.layout}>
+          <section className={`surface-panel ${styles.calendarSection}`}>
+            <div className={styles.sectionHeader}>
               <div>
-                <h3 className="text-lg font-medium text-white">Месяц дежурств</h3>
+                <h3 className={styles.sectionTitle}>Календарь месяца</h3>
+                <p className={styles.sectionCopy}>Клик по дате открывает контекстное меню дня. Для staff там же доступны оценка и комментарий.</p>
               </div>
-              <div className="rounded-full border border-[#2d3440] bg-[#11161e] px-4 py-2 text-xs uppercase tracking-[0.24em] text-[#9aa2af]">
+              <div className="badge">
                 {queueDraft.length} блоков в очереди
               </div>
             </div>
 
-            <div className="mt-6 hidden md:block">
-              <div className="grid grid-cols-7 gap-3 text-center text-[11px] uppercase tracking-[0.28em] text-[#6f7785]">
+            <div className={styles.desktopCalendar}>
+              <div className={styles.weekHeader}>
                 {weekdayLabels.map((label) => (
-                  <div key={label} className="rounded-full border border-transparent px-2 py-2">{label}</div>
+                  <div key={label} className={styles.weekday}>{label}</div>
                 ))}
               </div>
 
-              <div className="mt-3 grid grid-cols-7 gap-3">
+              <div className={styles.calendarGrid}>
                 {Array.from({ length: leadingEmptyCells }).map((_, index) => (
-                  <div key={`empty-${index}`} className="min-h-32 rounded-[24px] border border-dashed border-[#1d232d] bg-[#0d1015]" />
+                  <div key={`empty-${index}`} className={styles.emptyCell} />
                 ))}
 
-                {data.days.map((day) => (
-                  <div
-                    key={day.date}
-                    className={`min-h-32 min-w-0 overflow-hidden rounded-[24px] border p-4 transition ${
-                      day.is_today
-                        ? 'border-[#6fb184]/50 bg-[linear-gradient(180deg,#13241a_0%,#10161a_100%)] shadow-[0_18px_45px_rgba(17,41,24,0.28)]'
-                        : 'border-[#1f2430] bg-[#10141b]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`text-sm font-semibold ${day.is_today ? 'text-white' : 'text-[#d7dde7]'}`}>{day.day}</span>
-                      {day.queue_position && (
-                        <span className="rounded-full border border-[#2f3640] px-2 py-0.5 text-[10px] uppercase tracking-[0.24em] text-[#8d93a0]">
-                          #{day.queue_position}
-                        </span>
-                      )}
-                    </div>
+                {data.days.map((day) => {
+                  const isSelected = selectedDay?.date === day.date;
+                  const assessmentMeta = day.assessment ? getDutyGradeMeta(day.assessment.grade) : null;
+                  const className = [
+                    styles.dayCard,
+                    day.room ? styles.dayButton : '',
+                    day.is_today ? styles.dayToday : '',
+                    isSelected ? styles.daySelected : '',
+                  ].filter(Boolean).join(' ');
 
-                    <div className="mt-6">
-                      {day.room ? (
-                        <>
-                          <p className="text-[11px] uppercase tracking-[0.28em] text-[#6f7785]">Дежурит</p>
-                          <p className="mt-2 text-xl font-semibold leading-tight text-white [overflow-wrap:anywhere] xl:text-2xl">{day.room}</p>
-                        </>
-                      ) : (
-                        <p className="mt-6 text-sm text-[#5d6573]">Очередь ещё не заполнена</p>
-                      )}
+                  const content = (
+                    <>
+                      <div className={styles.dayHeader}>
+                        <span className={styles.dayNumber}>{day.day}</span>
+                        {day.queue_position ? <span className={styles.queueBadge}>#{day.queue_position}</span> : null}
+                      </div>
+
+                      <div className={styles.dayBody}>
+                        {day.room ? (
+                          <>
+                            <span className={styles.roomLabel}>Дежурит</span>
+                            <div className={styles.roomValue}>Блок {day.room}</div>
+                            {assessmentMeta ? (
+                              <span className={styles.assessmentPill} style={{ color: assessmentMeta.color, borderColor: assessmentMeta.border, background: assessmentMeta.surface }}>
+                                {assessmentMeta.shortLabel}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <p className={styles.emptyText}>На этот день очередь ещё не назначена.</p>
+                        )}
+                      </div>
+                    </>
+                  );
+
+                  if (day.room) {
+                    return (
+                      <div key={day.date} className={[styles.daySlot, isSelected ? styles.daySlotActive : ''].join(' ').trim()}>
+                        <button type="button" className={className} onClick={() => toggleDayMenu(day)} aria-expanded={isSelected ? true : undefined}>
+                          {content}
+                        </button>
+                        {isSelected ? renderDayMenu(day) : null}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={day.date} className={className}>
+                      {content}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            <div className="mt-5 space-y-3 md:hidden">
-              {data.days.map((day) => (
-                <div
-                  key={day.date}
-                  className={`rounded-[24px] border p-4 ${
-                    day.is_today
-                      ? 'border-[#6fb184]/50 bg-[linear-gradient(180deg,#13241a_0%,#10161a_100%)]'
-                      : 'border-[#1f2430] bg-[#10141b]'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium capitalize text-white">{formatMobileDayLabel(day.date)}</div>
-                      <div className="mt-1 text-sm text-[#8d93a0]">{day.room ? `Блок ${day.room}` : 'Очередь не заполнена'}</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {day.queue_position && (
-                        <span className="rounded-full border border-[#2f3640] px-2 py-0.5 text-[10px] uppercase tracking-[0.24em] text-[#8d93a0]">
-                          #{day.queue_position}
+            <div className={styles.mobileList}>
+              {data.days.map((day) => {
+                const isSelected = selectedDay?.date === day.date;
+                const assessmentMeta = day.assessment ? getDutyGradeMeta(day.assessment.grade) : null;
+
+                return (
+                  <div key={day.date} className={[styles.mobileSlot, isSelected ? styles.mobileSlotActive : ''].join(' ').trim()}>
+                    <button
+                      type="button"
+                      className={styles.mobileCard}
+                      onClick={() => day.room && toggleDayMenu(day)}
+                      aria-expanded={isSelected ? true : undefined}
+                      disabled={!day.room}
+                    >
+                      <div className={styles.dayHeader}>
+                        <div>
+                          <div className={styles.roomValue} style={{ fontSize: '1rem' }}>{formatMobileDayLabel(day.date)}</div>
+                          <div className={styles.metricNote}>{day.room ? `Блок ${day.room}` : 'Очередь ещё не заполнена'}</div>
+                        </div>
+                        {day.queue_position ? <span className={styles.queueBadge}>#{day.queue_position}</span> : null}
+                      </div>
+                      {assessmentMeta ? (
+                        <span className={styles.assessmentPill} style={{ color: assessmentMeta.color, borderColor: assessmentMeta.border, background: assessmentMeta.surface }}>
+                          {assessmentMeta.label}
                         </span>
-                      )}
-                      {day.is_today && (
-                        <span className="rounded-full border border-[#3f5a47] bg-[#173021] px-2 py-0.5 text-[10px] uppercase tracking-[0.24em] text-[#93ddb1]">
-                          Сегодня
-                        </span>
-                      )}
-                    </div>
+                      ) : null}
+                    </button>
+                    {isSelected ? renderDayMenu(day, true) : null}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
-          <div className="order-1 flex flex-col gap-5 xl:order-2">
-            <section className="order-2 rounded-[30px] border border-[#212833] bg-[#0b0d11] p-5 sm:p-6 xl:order-1">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <aside className={styles.sidebar}>
+            <section className={`surface-panel ${styles.sidebarSection}`}>
+              <div className={styles.sectionHeader}>
                 <div>
-                  <h3 className="text-lg font-medium text-white">Очередь блоков</h3>
-                  <p className="mt-1 text-sm text-[#8d93a0]">
+                  <h3 className={styles.sectionTitle}>Очередь блоков</h3>
+                  <p className={styles.sectionCopy}>
                     {data.can_edit
-                      ? 'После изменения очереди не забудьте сохранить график внизу, чтобы изменения вступили в силу.'
-                      : 'Редактирование доступно только старосте, председателю и администратору.'}
+                      ? 'Меняйте порядок перетаскиванием, добавляйте новые блоки и сохраняйте очередь, когда всё готово.'
+                      : 'Очередь можно просматривать, но редактировать её могут только staff-роли.'}
                   </p>
                 </div>
-                <div className="rounded-full border border-[#2d3440] bg-[#11161e] px-3 py-1 text-xs uppercase tracking-[0.24em] text-[#9aa2af]">
-                  {queueDraft.length} элементов
-                </div>
+                <div className="badge">{queueDraft.length} позиций</div>
               </div>
 
-              <div className="mt-5 space-y-3">
+              <div className={styles.queueList}>
                 {queueDraft.map((block, index) => (
-                  <div key={`${block}-${index}`} className="rounded-[24px] border border-[#1f2430] bg-[#10141b] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-[0.28em] text-[#6f7785]">Позиция {index + 1}</div>
-                        <div className="mt-2 text-lg font-semibold text-white">Блок {block}</div>
+                  <article
+                    key={`${block}-${index}`}
+                    className={[
+                      styles.queueItem,
+                      data.can_edit ? styles.queueItemDraggable : '',
+                      draggedIndex === index ? styles.queueItemDragging : '',
+                      dragOverIndex === index && draggedIndex !== null && draggedIndex !== index ? styles.queueItemTarget : '',
+                    ].join(' ').trim()}
+                    draggable={data.can_edit}
+                    onDragStart={(event) => handleQueueDragStart(event, index)}
+                    onDragOver={(event) => handleQueueDragOver(event, index)}
+                    onDrop={(event) => handleQueueDrop(event, index)}
+                    onDragEnd={handleQueueDragEnd}
+                  >
+                    <div className={styles.queueRow}>
+                      <div>
+                        <div className={styles.roomLabel}>Позиция {index + 1}</div>
+                        <p className={styles.queueTitle}>Блок {block}</p>
                       </div>
 
                       {data.can_edit && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <button onClick={() => moveDraftItem(index, -1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2f3640] text-[#d9e1ec] transition hover:border-[#566173]">
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => moveDraftItem(index, 1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2f3640] text-[#d9e1ec] transition hover:border-[#566173]">
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => removeDraftItem(index)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#4d2a2a] text-[#ffb4aa] transition hover:border-[#7a4444]">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        <div className={styles.queueHeaderActions}>
+                          <div className={styles.dragHandle} title="Перетащить блок">
+                            <GripVertical size={16} />
+                          </div>
+                          <div className={styles.queueActions}>
+                            <button type="button" className={styles.circleButton} onClick={() => moveDraftItem(index, -1)}>
+                              <ChevronUp size={16} />
+                            </button>
+                            <button type="button" className={styles.circleButton} onClick={() => moveDraftItem(index, 1)}>
+                              <ChevronDown size={16} />
+                            </button>
+                            <button type="button" className={styles.circleButton} onClick={() => removeDraftItem(index)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
+                  </article>
                 ))}
 
-                {queueDraft.length === 0 && (
-                  <div className="rounded-[24px] border border-dashed border-[#262c37] px-4 py-10 text-center text-sm text-[#6f7785]">
-                    Очередь пока пустая.
-                  </div>
-                )}
+                {queueDraft.length === 0 && <div className="empty-placeholder">Очередь пока пустая.</div>}
               </div>
 
               {data.can_edit && (
-                <div className="mt-5 space-y-4">
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                <>
+                  <div className={styles.addRow}>
                     <input
+                      className="field"
                       value={newBlock}
                       onChange={(event) => setNewBlock(event.target.value)}
                       onKeyDown={(event) => {
@@ -421,71 +658,54 @@ export function ScheduleView({ session }: ScheduleViewProps) {
                           addBlockToDraft();
                         }
                       }}
-                      placeholder="Добавить блок, например 1502"
-                      className="flex-1 rounded-full border border-[#2a303b] bg-[#11161e] px-4 py-3 text-sm text-[#edf2f8] placeholder:text-[#69717f] focus:border-[#536071] focus:outline-none"
+                      placeholder="Например, 1502"
                     />
-                    <button
-                      onClick={addBlockToDraft}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-[#303641] bg-[#171b22] px-4 py-3 text-sm text-[#dfe6f2] transition hover:border-[#4c5665]"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Добавить
+                    <button type="button" className="button-secondary" onClick={addBlockToDraft}>
+                      <Plus size={16} /> Добавить
                     </button>
                   </div>
+                  {saveMessage ? <div className="state-message">{saveMessage}</div> : null}
+                  {saveError ? <div className="state-message error">{saveError}</div> : null}
 
-                  {saveMessage && <div className="text-sm text-[#93ddb1]">{saveMessage}</div>}
-                  {saveError && <div className="text-sm text-[#ffb4aa]">{saveError}</div>}
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={saveSchedule}
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-full bg-[#dce5f3] px-5 py-3 text-sm font-medium text-[#09111c] disabled:opacity-60"
-                    >
-                      <Save className="h-4 w-4" />
-                      {saving ? 'Сохраняю...' : 'Сохранить график'}
+                  <div className={styles.saveRow}>
+                    <button type="button" className="button" onClick={saveSchedule} disabled={saving}>
+                      <Save size={16} /> {saving ? 'Сохраняю...' : 'Сохранить очередь'}
                     </button>
-                    <button
-                      onClick={() => setQueueDraft([])}
-                      className="rounded-full border border-[#4d2a2a] px-5 py-3 text-sm text-[#ffb4aa] transition hover:border-[#7a4444]"
-                    >
+                    <button type="button" className="button-danger" onClick={() => setQueueDraft([])}>
                       Очистить очередь
                     </button>
                   </div>
-                </div>
+                </>
               )}
             </section>
 
-            <section className="order-1 rounded-[30px] border border-[#212833] bg-[#0b0d11] p-5 sm:p-6 xl:order-2">
-              <div className="mb-4">
-                <h3 className="text-lg font-medium text-white">Ближайшие дежурства</h3>
+            <section className={`surface-panel ${styles.sidebarSection}`}>
+              <div className={styles.sectionHeader}>
+                <div>
+                  <h3 className={styles.sectionTitle}>Ближайшие дежурства</h3>
+                  <p className={styles.sectionCopy}>Короткий список ближайших смен, чтобы не искать их по всему месяцу.</p>
+                </div>
               </div>
 
-              <div className="space-y-3">
+              <div className={styles.upcomingList}>
                 {upcomingDays.map((day) => (
-                  <div key={day.date} className="rounded-[22px] border border-[#1f2430] bg-[#10141b] p-4">
-                    <div className="flex items-center justify-between gap-3">
+                  <article key={day.date} className={styles.upcomingItem}>
+                    <div className={styles.queueRow}>
                       <div>
-                        <div className="text-sm font-medium text-white">{formatMobileDayLabel(day.date)}</div>
-                        <div className="mt-1 text-sm text-[#8d93a0]">Блок {day.room}</div>
+                        <div className={styles.queueTitle}>{formatMobileDayLabel(day.date)}</div>
+                        <div className={styles.metricNote}>Блок {day.room}</div>
                       </div>
-                      {day.is_today && (
-                        <span className="rounded-full border border-[#3f5a47] bg-[#173021] px-2 py-0.5 text-[10px] uppercase tracking-[0.24em] text-[#93ddb1]">
-                          Сегодня
-                        </span>
-                      )}
+                      {day.is_today ? <span className="badge">Сегодня</span> : null}
                     </div>
-                  </div>
+                  </article>
                 ))}
 
                 {upcomingDays.length === 0 && (
-                  <div className="rounded-[22px] border border-dashed border-[#262c37] px-4 py-8 text-center text-sm text-[#6f7785]">
-                    Для этого месяца дежурства ещё не назначены.
-                  </div>
+                  <div className="empty-placeholder">Для этого месяца дежурства пока не назначены.</div>
                 )}
               </div>
             </section>
-          </div>
+          </aside>
         </div>
       )}
     </div>

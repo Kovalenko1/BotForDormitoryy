@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, MessageCircle, Users } from 'lucide-react';
 import { ApiError, dashboardApi } from '../api';
 import { formatMoscowDateTime } from '../lib/time';
 import type { DashboardOverviewResponse, ViewType } from '../types';
+import styles from './DashboardView.module.scss';
 
 interface DashboardViewProps {
   onNavigate: (view: ViewType) => void;
@@ -37,22 +38,24 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
   }, []);
 
   if (errorMessage) {
-      return (
-      <div className="px-4 pb-8 pt-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto bg-[#111111] border border-[#2A1616] rounded-2xl p-6 text-[#E0E0E0]">
-          {errorMessage}
-        </div>
+    return (
+      <div className={styles.page}>
+        <section className={`surface-panel ${styles.error}`}>{errorMessage}</section>
       </div>
     );
   }
 
   if (!data) {
-      return (
-      <div className="px-4 pb-8 pt-4 space-y-6 sm:px-6 lg:px-8 animate-in fade-in duration-300">
-        <div className="h-8 w-64 bg-[#111111] rounded-full" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    return (
+      <div className={styles.page}>
+        <section className={`surface-panel ${styles.hero}`}>
+          <p className="eyebrow">Обзор dashboard</p>
+          <h2 className="page-title">Собираю рабочую сводку</h2>
+          <p className="page-copy">Подтягиваю ключевые метрики, журнал и последние ошибки.</p>
+        </section>
+        <div className={styles.stats}>
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-32 rounded-xl bg-[#111111] border border-[#1F1F1F]" />
+            <div key={index} className={`surface-panel ${styles.statCard}`} />
           ))}
         </div>
       </div>
@@ -64,59 +67,69 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       label: 'Жильцов в доступе',
       value: data.summary.users_count,
       icon: Users,
-      color: 'text-blue-400',
-      bg: 'bg-blue-400/10',
+      color: '#8fc4ff',
+      surface: 'rgba(143, 196, 255, 0.16)',
       targetView: 'management' as ViewType,
     },
     {
       label: 'Событий бота',
       value: data.summary.bot_logs_count,
       icon: Activity,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-400/10',
+      color: '#91d9b3',
+      surface: 'rgba(145, 217, 179, 0.16)',
       targetView: 'general' as ViewType,
     },
     {
       label: 'Сообщений',
       value: data.summary.messages_count,
       icon: MessageCircle,
-      color: 'text-amber-400',
-      bg: 'bg-amber-400/10',
+      color: '#ffb869',
+      surface: 'rgba(255, 184, 105, 0.16)',
       targetView: 'general' as ViewType,
     },
     {
       label: 'Ошибок отправки',
       value: data.summary.failed_count,
       icon: AlertTriangle,
-      color: 'text-rose-400',
-      bg: 'bg-rose-400/10',
+      color: '#ff8d82',
+      surface: 'rgba(255, 141, 130, 0.16)',
       targetView: 'errors' as ViewType,
     },
   ];
 
   return (
-    <div className="px-4 pb-8 pt-4 space-y-8 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="mb-8">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold mb-1">Метрики и статистика бота общежития.</p>
-        <h2 className="text-3xl font-serif italic text-white tracking-tight">Обзор системы</h2>
-      </header>
+    <div className={styles.page}>
+      <section className={`surface-panel ${styles.hero}`}>
+        <div>
+          <p className="eyebrow">Рабочая сводка</p>
+          <h2 className="page-title">Что происходит в системе прямо сейчас</h2>
+          <p className="page-copy">
+            Быстрый срез по сообщениям, событиям бота и сбоям отправки. Отсюда удобно перейти в журнал, календарь или раздел управления.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={styles.heroActions}>
+          <button className="button-secondary" onClick={() => onNavigate('schedule')}>Открыть календарь</button>
+          <button className="button-ghost" onClick={() => onNavigate('statistics')}>Посмотреть статистику</button>
+        </div>
+      </section>
+
+      <div className={styles.stats}>
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <button
               key={stat.label}
               onClick={() => onNavigate(stat.targetView)}
-              className="bg-[#111111] border border-[#1F1F1F] rounded-xl p-6 hover:border-[#303030] transition-colors text-left"
+              className={`surface-panel ${styles.statCard}`}
             >
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                  <Icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
+              <div className={styles.statRow}>
                 <div>
-                  <p className="text-[#808080] text-[11px] uppercase tracking-widest font-bold">{stat.label}</p>
-                  <p className="text-3xl font-semibold text-white mt-1">{stat.value}</p>
+                  <p className={styles.statLabel}>{stat.label}</p>
+                  <p className={styles.statValue}>{stat.value}</p>
+                </div>
+                <div className={styles.statIcon} style={{ background: stat.surface }}>
+                  <Icon className="w-6 h-6" style={{ color: stat.color }} />
                 </div>
               </div>
             </button>
@@ -124,52 +137,60 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="overflow-hidden bg-[#111111] border border-[#1F1F1F] rounded-xl p-6">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <h3 className="text-lg font-medium text-[#B0B0B0]">Недавняя активность</h3>
-            <button onClick={() => onNavigate('general')} className="text-xs uppercase tracking-[0.2em] text-[#707070] hover:text-[#E0E0E0]">
-              В журнал
+      <div className={styles.columns}>
+        <section className={`surface-panel ${styles.section}`}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h3 className={styles.sectionTitle}>Последние события</h3>
+              <p className={styles.sectionCopy}>Что бот успел сделать в доступном вам контуре за последнее время.</p>
+            </div>
+            <button onClick={() => onNavigate('general')} className="button-ghost">
+              Открыть журнал
             </button>
           </div>
-          <div className="space-y-4">
+
+          <div className={styles.feed}>
             {data.recent_activity.map((item) => (
-              <div key={item.id} className="flex min-w-0 items-start gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-[#34C759] shadow-[0_0_8px_rgba(52,199,89,0.3)]" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[#E0E0E0]">{item.title}</p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#505050] mt-1">{item.subtitle}</p>
-                  <p className="mt-2 text-sm text-[#B0B0B0] break-words [overflow-wrap:anywhere]">{item.text}</p>
-                  <p className="text-xs text-[#505050] font-mono mt-2">{formatMoscowDateTime(item.timestamp)}</p>
+              <article key={item.id} className={styles.feedItem}>
+                <div className={styles.feedDot} style={{ background: '#91d9b3' }} />
+                <div>
+                  <p className={styles.feedTitle}>{item.title}</p>
+                  <p className={styles.feedSubtitle}>{item.subtitle}</p>
+                  <p className={styles.feedText}>{item.text}</p>
+                  <p className={styles.feedTime}>{formatMoscowDateTime(item.timestamp)}</p>
                 </div>
-              </div>
+              </article>
             ))}
             {data.recent_activity.length === 0 && (
-              <p className="text-[#505050] text-sm">В доступном scope пока нет недавней активности.</p>
+              <div className="empty-placeholder">В доступной зоне пока тихо: свежих событий нет.</div>
             )}
           </div>
         </section>
 
-        <section className="overflow-hidden bg-[#111111] border border-[#1F1F1F] rounded-xl p-6">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <h3 className="text-lg font-medium text-[#B0B0B0]">Недавние ошибки</h3>
-            <button onClick={() => onNavigate('errors')} className="text-xs uppercase tracking-[0.2em] text-[#707070] hover:text-[#E0E0E0]">
-              К ошибкам
+        <section className={`surface-panel ${styles.section}`}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h3 className={styles.sectionTitle}>Сигналы о сбоях</h3>
+              <p className={styles.sectionCopy}>Ошибки доставки и другие сбои, на которые стоит обратить внимание в первую очередь.</p>
+            </div>
+            <button onClick={() => onNavigate('errors')} className="button-ghost">
+              Перейти к сбоям
             </button>
           </div>
-          <div className="space-y-4">
+
+          <div className={styles.feed}>
             {data.recent_errors.map((item) => (
-              <div key={item.id} className="flex min-w-0 items-start gap-4">
-                <div className="w-2 h-2 mt-2 rounded-full bg-[#FF3B30] shadow-[0_0_8px_rgba(255,59,48,0.3)]" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[#E0E0E0] break-words [overflow-wrap:anywhere]">{item.message}</p>
-                  <p className="mt-1 text-xs text-[#808080] break-words [overflow-wrap:anywhere]">{item.context}</p>
-                  <p className="text-xs text-[#505050] font-mono mt-2">{formatMoscowDateTime(item.timestamp)}</p>
+              <article key={item.id} className={styles.feedItem}>
+                <div className={styles.feedDot} style={{ background: '#ff8d82' }} />
+                <div>
+                  <p className={styles.feedTitle}>{item.message}</p>
+                  <p className={styles.feedText}>{item.context}</p>
+                  <p className={styles.feedTime}>{formatMoscowDateTime(item.timestamp)}</p>
                 </div>
-              </div>
+              </article>
             ))}
             {data.recent_errors.length === 0 && (
-              <p className="text-[#505050] text-sm">Ошибок отправки в доступном scope пока нет.</p>
+              <div className="empty-placeholder">За последнее время серьёзных сбоев не зафиксировано.</div>
             )}
           </div>
         </section>

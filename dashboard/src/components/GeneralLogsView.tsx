@@ -36,8 +36,8 @@ export function GeneralLogsView() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 pb-8 pt-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="mb-8 flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold">Единая хронология всех событий и сообщений бота.</p>
-        <h2 className="text-3xl font-serif italic text-white tracking-tight">Системный поток</h2>
+        <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold">Живой журнал событий и сообщений.</p>
+        <h2 className="text-3xl font-serif italic text-white tracking-tight">Лента системы</h2>
       </header>
 
       <div className="bg-[#0C0C0C] border border-[#1F1F1F] rounded-2xl overflow-hidden">
@@ -94,7 +94,7 @@ export function GeneralLogsView() {
           })}
 
           {!errorMessage && logs.length === 0 && (
-            <div className="p-10 text-center text-[#505050]">В журнале пока нет записей в доступном scope.</div>
+            <div className="p-10 text-center text-[#505050]">В доступной вам зоне пока нет новых записей.</div>
           )}
         </div>
       </div>

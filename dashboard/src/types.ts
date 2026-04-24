@@ -75,7 +75,17 @@ export interface OutgoingMessageLog {
   created_at: string;
 }
 
-export type ViewType = 'dashboard' | 'general' | 'users' | 'errors' | 'schedule' | 'management';
+export type ViewType = 'dashboard' | 'general' | 'users' | 'errors' | 'schedule' | 'statistics' | 'management';
+
+export type DutyAssessmentGrade = 'excellent' | 'good' | 'satisfactory' | 'unsatisfactory';
+
+export interface DutyAssessment {
+  grade: DutyAssessmentGrade;
+  note: string | null;
+  created_by_chat_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface DashboardSessionUser {
   chat_id: string;
@@ -97,7 +107,9 @@ export interface DashboardPermissions {
   can_view_errors: boolean;
   can_view_user_history: boolean;
   can_view_schedule: boolean;
+  can_view_statistics: boolean;
   can_manage_schedule: boolean;
+  can_manage_duty_assessments: boolean;
   can_manage_roles: boolean;
   can_manage_user_access: boolean;
   can_manage_notifications: boolean;
@@ -194,6 +206,7 @@ export interface DutyCalendarDay {
   queue_position: number | null;
   is_today: boolean;
   is_current_month: boolean;
+  assessment: DutyAssessment | null;
 }
 
 export interface DutyCalendarResponse {
@@ -201,12 +214,41 @@ export interface DutyCalendarResponse {
   year: number;
   month: number;
   can_edit: boolean;
+  can_assess: boolean;
   scope: 'all' | 'floor';
   accessible_floors: number[];
   start_date: string;
   queue: DutyQueue[];
   notification_setting: NotificationSettingItem;
   days: DutyCalendarDay[];
+}
+
+export interface DutyAssessmentResponse {
+  floor: number;
+  duty_date: string;
+  room: string;
+  assessment: DutyAssessment;
+}
+
+export interface DutyStatsItem {
+  room: string;
+  assessment_count: number;
+  average_score: number;
+  average_percent: number;
+  grade_counts: Record<DutyAssessmentGrade, number>;
+  latest_assessment_at: string | null;
+}
+
+export interface DutyStatsResponse {
+  floor: number;
+  start_date: string;
+  end_date: string;
+  items: DutyStatsItem[];
+  summary: {
+    assessment_count: number;
+    average_score: number;
+    grade_counts: Record<DutyAssessmentGrade, number>;
+  };
 }
 
 export interface ManagementRolesResponse {

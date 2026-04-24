@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Enum, UniqueConstraint
 import enum
 
 from time_utils import moscow_now
@@ -12,6 +12,13 @@ class RoleEnum(str, enum.Enum):
     CHAIRMAN = "chairman"  # председатель
     STAROSTA = "starosta"
     USER = "user"
+
+
+class DutyAssessmentGrade(str, enum.Enum):
+    EXCELLENT = "excellent"
+    GOOD = "good"
+    SATISFACTORY = "satisfactory"
+    UNSATISFACTORY = "unsatisfactory"
 
 
 class User(Base):
@@ -126,3 +133,20 @@ class OutgoingMessageLog(Base):
     status = Column(String, nullable=False)
     error_message = Column(String, nullable=True)
     created_at = Column(DateTime, default=moscow_now, nullable=False)
+
+
+class DutyAssessment(Base):
+    __tablename__ = 'duty_assessments'
+    __table_args__ = (
+        UniqueConstraint('floor', 'duty_date', name='uq_duty_assessments_floor_date'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    floor = Column(Integer, nullable=False, index=True)
+    room = Column(String, nullable=False)
+    duty_date = Column(Date, nullable=False, index=True)
+    grade = Column(Enum(DutyAssessmentGrade), nullable=False)
+    note = Column(String, nullable=True)
+    created_by_chat_id = Column(String, nullable=False)
+    created_at = Column(DateTime, default=moscow_now, nullable=False)
+    updated_at = Column(DateTime, default=moscow_now, nullable=False)

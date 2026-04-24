@@ -1,0 +1,84 @@
+.root {
+  display: flex;
+  min-height: 100dvh;
+  color: var(--text-primary);
+  position: relative;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 22px;
+  overflow-y: auto;
+}
+
+.view {
+  min-height: 100%;
+}
+
+.hidden {
+  display: none;
+}
+
+.viewHost {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+}
+
+.overlay {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.overlayCard {
+  width: min(560px, 100%);
+  padding: 34px;
+}
+
+.overlayLabel {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.overlayTitle {
+  margin: 12px 0 0;
+  font-family: 'Syne', 'Segoe UI', sans-serif;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.overlayText {
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.overlayHint {
+  margin: 18px 0 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 767px) {
+  .root {
+    flex-direction: column;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .overlayCard {
+    padding: 28px 22px;
+  }
+}
