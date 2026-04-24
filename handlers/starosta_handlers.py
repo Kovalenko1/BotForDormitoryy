@@ -206,6 +206,13 @@ def process_rooms_input(message, bot: telebot.TeleBot, target_floor: int | None 
             else:
                 invalid_blocks.append(normalized_block)
 
+        # Reset cycle start so position 1 is on duty today
+        floor_setting = session.query(FloorNotificationSetting).filter(
+            FloorNotificationSetting.floor == user_floor
+        ).first()
+        if floor_setting:
+            floor_setting.last_notified_on = None
+
         session.commit()
 
     with next(get_db_session()) as session:

@@ -99,21 +99,6 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
   return (
     <div className={styles.page}>
-      <section className={`surface-panel ${styles.hero}`}>
-        <div>
-          <p className="eyebrow">Рабочая сводка</p>
-          <h2 className="page-title">Что происходит в системе прямо сейчас</h2>
-          <p className="page-copy">
-            Быстрый срез по сообщениям, событиям бота и сбоям отправки. Отсюда удобно перейти в журнал, календарь или раздел управления.
-          </p>
-        </div>
-
-        <div className={styles.heroActions}>
-          <button className="button-secondary" onClick={() => onNavigate('schedule')}>Открыть календарь</button>
-          <button className="button-ghost" onClick={() => onNavigate('statistics')}>Посмотреть статистику</button>
-        </div>
-      </section>
-
       <div className={styles.stats}>
         {stats.map((stat) => {
           const Icon = stat.icon;

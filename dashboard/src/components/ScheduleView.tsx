@@ -403,10 +403,6 @@ export function ScheduleView({ session }: ScheduleViewProps) {
         <div className={styles.heroTop}>
           <div className="max-w-2xl">
             <p className="eyebrow">Календарь дежурств</p>
-            <h2 className="page-title">Очередь, оценки и ближайшие смены</h2>
-            <p className="page-copy">
-              Календарь показывает, кто дежурит в конкретный день, а staff может открыть по дате компактное меню и сразу зафиксировать результат.
-            </p>
           </div>
 
           <div className={styles.heroControls}>

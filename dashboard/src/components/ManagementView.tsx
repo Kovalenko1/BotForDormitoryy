@@ -557,10 +557,6 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
         <div className={styles.heroTop}>
           <div className="max-w-2xl">
             <p className="eyebrow">Роли, доступ и коммуникация</p>
-            <h2 className="page-title">Кто за что отвечает и у кого какой доступ</h2>
-            <p className="page-copy">
-              Здесь собраны staff-роли, белый и чёрный списки, настройки уведомлений и массовые сообщения. Раздел не про «сырые данные», а про рабочие решения: быстро найти человека, поправить доступ и не терять контекст.
-            </p>
           </div>
 
           <button

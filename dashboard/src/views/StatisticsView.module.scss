@@ -72,7 +72,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .legendItem {
@@ -83,93 +83,95 @@
   font-weight: 700;
 }
 
-.histogramShell {
+/* ── Horizontal bar chart ───────────────────────────────── */
+.barList {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
-.scale {
-  height: 244px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 4px 0 30px;
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.histogramScroller {
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.histogram {
-  min-width: max-content;
-  min-height: 280px;
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-}
-
-.column {
-  width: 94px;
+.barRow {
   display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 52px;
   gap: 10px;
+  align-items: center;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(8, 14, 10, 0.86);
+  cursor: default;
+  transition: background 150ms ease, border-color 150ms ease;
 }
 
-.columnVisual {
+.barRow:hover {
+  border-color: rgba(122, 255, 167, 0.16);
+  background: rgba(10, 18, 13, 0.92);
+}
+
+.barMeta {
   display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
-.columnTrack {
-  position: relative;
-  height: 200px;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, #0d1510, #09100c),
-    repeating-linear-gradient(to top, rgba(122, 255, 167, 0.07) 0 1px, transparent 1px 40px);
-  padding: 6px;
-}
-
-.columnStack {
-  position: relative;
-  width: 100%;
-}
-
-.columnSegment {
-  position: absolute;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.columnGhost {
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-  border: 1px dashed rgba(111, 166, 127, 0.2);
-  background: #0c130f;
-}
-
-.columnFooter {
-  display: grid;
-  gap: 2px;
-}
-
-.columnLabel {
-  margin: 0;
-  font-size: 12px;
+.barRoom {
   font-weight: 800;
-  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.barCount {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.barTrack {
+  height: 22px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.barFill {
+  height: 100%;
+  display: flex;
+  border-radius: 99px;
+  overflow: hidden;
+  min-width: 6px;
+  transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.barSegment {
+  height: 100%;
+  min-width: 4px;
+}
+
+.barEmpty {
+  height: 100%;
+  width: 100%;
+  border-radius: 99px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(111, 166, 127, 0.07) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.barScore {
+  text-align: right;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.barMax {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-left: 1px;
 }
 
 .error {
@@ -197,28 +199,17 @@
   }
 
   .filters,
-  .summary,
-  .histogramShell {
-    grid-template-columns: 1fr;
-  }
-
-  .scale {
-    display: none;
-  }
-
   .summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .histogram {
-    gap: 10px;
+  .barRow {
+    grid-template-columns: 90px minmax(0, 1fr) 44px;
+    gap: 8px;
+    padding: 10px 12px;
   }
 
-  .column {
-    width: 84px;
-  }
-
-  .columnTrack {
-    height: 180px;
+  .barRoom {
+    font-size: 12.5px;
   }
 }

@@ -552,6 +552,10 @@ def _replace_schedule(session, floor: int, blocks: list[str]):
             wing='',
         ))
 
+    # Reset cycle start so the first block in the new schedule is on duty today
+    setting = _get_floor_setting(session, floor)
+    setting.last_notified_on = None
+
     session.commit()
 
 
@@ -914,6 +918,14 @@ def get_duty_calendar(
             for item in assessments
         }
 
+    # Rotate queue so position 1 = today's duty block
+    queue_list = list(queue_items)
+    if queue_list:
+        today_offset = (date.today() - schedule_start_date).days % len(queue_list)
+        rotated_queue = queue_list[today_offset:] + queue_list[:today_offset]
+    else:
+        rotated_queue = []
+
     return {
         'floor': target_floor,
         'year': year_value,
@@ -923,7 +935,7 @@ def get_duty_calendar(
         'scope': access.scope_value,
         'accessible_floors': access.accessible_floors,
         'start_date': schedule_start_date.isoformat(),
-        'queue': [_queue_payload(item) for item in queue_items],
+        'queue': [_queue_payload(item) for item in rotated_queue],
         'notification_setting': _notification_setting_payload(setting, target_floor),
         'days': _build_calendar_days(queue_items, schedule_start_date, year_value, month_value, assessments_by_date),
     }

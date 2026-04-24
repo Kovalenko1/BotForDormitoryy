@@ -1,5 +1,4 @@
 ﻿/* ── Hidden on desktop by default ───────────────────────── */
-.mobileHeader,
 .bottomNav {
   display: none;
 }
@@ -231,73 +230,6 @@
 @media (max-width: 767px) {
   .desktop {
     display: none;
-  }
-
-  /* ── Compact sticky top bar ───────────────────────────── */
-  .mobileHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    padding: 10px 16px;
-    background: rgba(3, 6, 4, 0.97);
-    backdrop-filter: blur(28px) saturate(1.5);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
-    border-bottom: 1px solid var(--border-subtle);
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.36);
-    min-height: 54px;
-  }
-
-  .mobileBrand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    flex: 1;
-  }
-
-  .mobileBadge {
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    border-radius: 10px;
-    flex-shrink: 0;
-    background: linear-gradient(145deg, #c8ffd8 0%, #58e090 55%, #28b060 100%);
-    color: #031007;
-    box-shadow: 0 3px 14px rgba(55, 180, 95, 0.28);
-  }
-
-  .brandTitle {
-    font-size: 0.98rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: -0.02em;
-  }
-
-  .mobileUserInfo {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 1px;
-  }
-
-  .mobileUserInfo .profileName {
-    font-size: 12px;
-    margin: 0;
-    color: var(--text-secondary);
-    font-weight: 600;
-  }
-
-  .mobileUserInfo .profileMeta {
-    font-size: 9.5px;
-    color: var(--text-dim);
-    margin: 0;
   }
 
   /* ── Fixed bottom navigation bar ─────────────────────── */

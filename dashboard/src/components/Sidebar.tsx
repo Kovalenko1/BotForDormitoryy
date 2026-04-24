@@ -53,20 +53,6 @@ export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
 
   return (
     <>
-      {/* ── Mobile: compact sticky header ─────────────────── */}
-      <div className={styles.mobileHeader}>
-        <div className={styles.mobileBrand}>
-          <div className={styles.mobileBadge}>
-            <MessageSquare size={16} strokeWidth={2.7} />
-          </div>
-          <h1 className={styles.brandTitle}>Dormitory Control</h1>
-        </div>
-        <div className={styles.mobileUserInfo}>
-          <p className={styles.profileName}>{session.user.display_name}</p>
-          <p className={styles.profileMeta}>{roleLabel} · {scopeLabel}</p>
-        </div>
-      </div>
-
       {/* ── Desktop sidebar ───────────────────────────────── */}
       <aside className={styles.desktop}>
         <div className={styles.desktopInner}>

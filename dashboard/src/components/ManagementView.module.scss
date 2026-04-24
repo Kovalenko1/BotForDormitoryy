@@ -631,28 +631,85 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .tabsShell,
-  .sectionCard,
-  .sectionCardSoft {
-    padding: 16px;
+  .tabsShell {
+    padding: 8px 12px;
   }
 
-  .sectionHeaderBlock,
-  .sectionLead,
+  .sectionCard,
+  .sectionCardSoft {
+    padding: 14px;
+  }
+
+  .sectionHeaderBlock {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sectionLead {
+    gap: 10px;
+  }
+
   .notificationRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .tabButton {
+    min-width: 120px;
+    padding: 10px 12px;
+  }
+
+  /* 2-column grids on mobile — easier to scan than 1 column */
+  .filterGridPrimary,
+  .filterGridSecondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .searchWide {
+    grid-column: span 2;
+  }
+
+  .broadcastGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* 1-column on mobile */
+  .directoryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Keep action buttons side-by-side */
+  .actionGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .primaryActions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .tabButton {
-    min-width: 132px;
-    padding: 12px;
+  .notificationControls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
 
+  .timeField {
+    width: auto;
+    min-width: 90px;
+    flex: 1;
+  }
+
+  .notificationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
   .filterGridPrimary,
   .filterGridSecondary,
-  .directoryGrid,
-  .actionGrid,
   .broadcastGrid {
     grid-template-columns: 1fr;
   }
@@ -661,13 +718,7 @@
     grid-column: auto;
   }
 
-  .primaryActions,
-  .notificationControls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .timeField {
-    width: 100%;
+  .actionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

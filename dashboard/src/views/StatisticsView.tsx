@@ -82,10 +82,9 @@ export function StatisticsView({ session }: StatisticsViewProps) {
     () => sortedItems.map((item) => {
       const segments = DUTY_GRADE_ORDER
         .filter((grade) => (item.grade_counts[grade] ?? 0) > 0)
-        .map((grade, index) => ({
+        .map((grade) => ({
           grade,
           count: item.grade_counts[grade] ?? 0,
-          index,
           meta: getDutyGradeMeta(grade),
         }));
 
@@ -93,7 +92,6 @@ export function StatisticsView({ session }: StatisticsViewProps) {
 
       return {
         ...item,
-        filledHeight: Math.max(item.average_percent, item.assessment_count > 0 ? 22 + Math.max(segments.length - 1, 0) * 8 : 0),
         segments,
         breakdown,
       };
@@ -116,10 +114,6 @@ export function StatisticsView({ session }: StatisticsViewProps) {
       <section className={`surface-panel ${styles.hero}`}>
         <div>
           <p className="eyebrow">Статистика дежурств</p>
-          <h2 className="page-title">Как блоки держат темп</h2>
-          <p className="page-copy">
-            Здесь видно, насколько ровно проходят дежурства за выбранный период. Чем выше столбец, тем стабильнее блок закрывает свои смены.
-          </p>
         </div>
 
         <div className={styles.filters}>
@@ -187,8 +181,8 @@ export function StatisticsView({ session }: StatisticsViewProps) {
         <section className={`surface-panel ${styles.chart}`}>
           <div className={styles.chartHeader}>
             <div>
-              <h3 className={styles.chartTitle}>Гистограмма по блокам</h3>
-              <p className={styles.chartCopy}>Высота столбца показывает общий уровень блока, а внутренние пластины накладываются друг на друга и показывают, какие типы оценок вообще встречались.</p>
+              <h3 className={styles.chartTitle}>Распределение оценок по блокам</h3>
+              <p className={styles.chartCopy}>Ширина полосы — средний балл относительно максимума (4). Заливка показывает типы оценок.</p>
             </div>
             <div className="badge"><BarChart3 size={14} /> {columns.length} блоков</div>
           </div>
@@ -206,56 +200,46 @@ export function StatisticsView({ session }: StatisticsViewProps) {
                 })}
               </div>
 
-              <div className={styles.histogramShell}>
-                <div className={styles.scale}>
-                  {[100, 75, 50, 25, 0].map((value) => (
-                    <span key={value}>{value}%</span>
-                  ))}
-                </div>
-
-                <div className={styles.histogramScroller}>
-                  <div className={styles.histogram}>
-                    {columns.map((item) => (
-                      <article
-                        key={item.room}
-                        className={styles.column}
-                        title={`Средний балл: ${item.average_score.toFixed(1)} из 4. Оценок: ${item.assessment_count}.${item.breakdown ? ` ${item.breakdown}.` : ''}`}
-                      >
-                        <div className={styles.columnVisual}>
-                          <div className={styles.columnTrack}>
-                            {item.assessment_count > 0 ? (
-                              <div className={styles.columnStack} style={{ height: `${item.filledHeight}%` }}>
-                                {item.segments.map((segment) => (
-                                  <div
-                                    key={segment.grade}
-                                    className={styles.columnSegment}
-                                    style={{
-                                      bottom: `${segment.index * 16}px`,
-                                      zIndex: segment.index + 1,
-                                      borderColor: segment.meta.border,
-                                      background: segment.meta.solid,
-                                      boxShadow: `0 12px 24px ${segment.meta.border}`,
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            ) : (
-                              <div className={styles.columnGhost} />
-                            )}
+              <div className={styles.barList}>
+                {columns.map((item) => {
+                  const total = item.assessment_count;
+                  return (
+                    <div
+                      key={item.room}
+                      className={styles.barRow}
+                      title={`Ср. балл: ${item.average_score.toFixed(1)}/4. Оценок: ${total}.${item.breakdown ? ` ${item.breakdown}.` : ''}`}
+                    >
+                      <div className={styles.barMeta}>
+                        <span className={styles.barRoom}>Блок {item.room}</span>
+                        <span className={styles.barCount}>{total} оц.</span>
+                      </div>
+                      <div className={styles.barTrack}>
+                        {total > 0 ? (
+                          <div className={styles.barFill} style={{ width: `${item.average_percent}%` }}>
+                            {item.segments.map((seg) => (
+                              <div
+                                key={seg.grade}
+                                className={styles.barSegment}
+                                style={{ flex: seg.count, background: seg.meta.solid }}
+                              />
+                            ))}
                           </div>
-                        </div>
-
-                        <div className={styles.columnFooter}>
-                          <p className={styles.columnLabel}>Блок {item.room}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
+                        ) : (
+                          <div className={styles.barEmpty} />
+                        )}
+                      </div>
+                      <div className={styles.barScore}>
+                        {total > 0 ? (
+                          <>{item.average_score.toFixed(1)}<span className={styles.barMax}>/4</span></>
+                        ) : '—'}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           ) : (
-            <div className="empty-placeholder">За выбранный период оценок пока нет. Как только staff начнёт отмечать дежурства, столбцы появятся здесь.</div>
+            <div className="empty-placeholder">За выбранный период оценок пока нет. Как только staff начнёт отмечать дежурства, строки появятся здесь.</div>
           )}
         </section>
       )}
