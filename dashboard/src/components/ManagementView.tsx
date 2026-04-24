@@ -167,6 +167,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
   const [broadcastResult, setBroadcastResult] = useState('');
   const [broadcastError, setBroadcastError] = useState('');
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null);
 
   useEffect(() => {
     const tabs: ManagementTab[] = [];
@@ -303,6 +304,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
   const rememberSuccess = (message: string) => {
     setActionMessage(message);
     setActionError('');
+    setSelectedUser(null);
   };
 
   const rememberError = (message: string) => {
@@ -523,20 +525,12 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
               </div>
 
               {session.permissions.can_manage_user_access && canManageUser(user) && (
-                <div className={styles.listActions}>
-                  <button
-                    onClick={() => handleAccessUpdate(user.chat_id, { is_whitelisted: listType !== 'white' }, listType === 'white' ? `${user.display_name} перемещён в чёрный список.` : `${user.display_name} добавлен в белый список.`)}
-                    className={[styles.actionButton, styles.actionButtonNeutral].join(' ')}
-                  >
-                    {listType === 'white' ? 'В чёрный список' : 'В белый список'}
-                  </button>
-                  <button
-                    onClick={() => handleAccessUpdate(user.chat_id, { is_blocked: !user.is_blocked }, user.is_blocked ? `${user.display_name} разблокирован.` : `${user.display_name} заблокирован.`)}
-                    className={[styles.actionButton, styles.actionButtonDanger].join(' ')}
-                  >
-                    {user.is_blocked ? 'Разблокировать' : 'Заблокировать'}
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleAccessUpdate(user.chat_id, { is_whitelisted: listType !== 'white' }, listType === 'white' ? `${user.display_name} перемещён в чёрный список.` : `${user.display_name} добавлен в белый список.`)}
+                  className={[styles.actionButton, styles.actionButtonNeutral].join(' ')}
+                >
+                  {listType === 'white' ? 'В чёрный список' : 'В белый список'}
+                </button>
               )}
             </div>
           </div>
@@ -763,7 +757,11 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
 
           <div className={styles.directoryGrid}>
             {visibleUsers.map((user) => (
-              <article key={user.chat_id} className={`surface-panel-soft ${styles.residentCard}`}>
+              <article
+                key={user.chat_id}
+                className={`surface-panel-soft ${styles.residentCard} ${canManageUser(user) ? styles.residentCardClickable : ''}`}
+                onClick={() => { if (canManageUser(user)) setSelectedUser(user); }}
+              >
                 <div className={styles.residentHead}>
                   <div className={styles.residentIdentity}>
                     <p className={`${styles.residentName} ${styles.textBreak}`}>{user.display_name}</p>
@@ -786,8 +784,6 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
                     {user.username ? ` · ${user.username}` : ''}
                   </div>
                 </div>
-
-                {renderActionPanel(user)}
               </article>
             ))}
           </div>
@@ -814,48 +810,6 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
             blackListUsers,
             'black',
           )}
-
-          <section className={`${styles.sectionCardSoft} ${styles.sectionCardDanger}`}>
-            <div className={styles.sectionHeaderBlock}>
-              <div>
-                <h3 className={styles.sectionTitle}>Заблокированные пользователи</h3>
-                <p className={styles.sectionCopy}>Блокировка закрывает dashboard и исключает пользователя из рабочих сценариев.</p>
-              </div>
-              <div className={[styles.sectionBadge, styles.sectionBadgeDanger].join(' ')}>
-                {blockedUsers.length}
-              </div>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-2">
-              {blockedUsers.map((user) => (
-                <div key={user.chat_id} className={styles.dangerCard}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-white">{user.display_name}</div>
-                      <div className={styles.dangerMeta}>
-                        {user.room ? `Комната ${user.room}` : 'Комната не указана'}
-                        {user.floor ? ` · этаж ${user.floor}` : ''}
-                      </div>
-                    </div>
-                    {canManageUser(user) && (
-                      <button
-                        onClick={() => handleAccessUpdate(user.chat_id, { is_blocked: false }, `${user.display_name} разблокирован.`)}
-                        className={[styles.actionButton, styles.actionButtonDangerSoft].join(' ')}
-                      >
-                        Разблокировать
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {blockedUsers.length === 0 && (
-                <div className={styles.emptyState}>
-                  Заблокированных пользователей нет.
-                </div>
-              )}
-            </div>
-          </section>
         </div>
       )}
 
@@ -991,6 +945,34 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
             </button>
           </div>
         </section>
+      )}
+
+      {/* User action modal */}
+      {selectedUser && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedUser(null)}>
+          <div className={styles.modalPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalUserInfo}>
+                <h3 className={styles.modalName}>{selectedUser.display_name}</h3>
+                <div className={styles.modalMeta}>
+                  <span className={styles.roleBadge}>{roleLabels[selectedUser.role] ?? selectedUser.role}</span>
+                  <span className={styles.statusPill} style={getStatusPillStyle(selectedUser)}>
+                    {selectedUser.is_blocked ? 'Blocked' : selectedUser.is_whitelisted ? 'White' : 'Black'}
+                  </span>
+                </div>
+                <div className={styles.modalMeta}>
+                  {selectedUser.room ? `Комната ${selectedUser.room}` : 'Комната не указана'}
+                  {selectedUser.floor ? ` · Этаж ${selectedUser.floor}` : ''}
+                  {selectedUser.username ? ` · ${selectedUser.username}` : ''}
+                </div>
+              </div>
+              <button className={styles.modalClose} onClick={() => setSelectedUser(null)}>×</button>
+            </div>
+            {canManageUser(selectedUser) ? renderActionPanel(selectedUser) : (
+              <div className={styles.modalNoActions}>Действия недоступны для этой роли.</div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -182,7 +182,7 @@ export function StatisticsView({ session }: StatisticsViewProps) {
           <div className={styles.chartHeader}>
             <div>
               <h3 className={styles.chartTitle}>Распределение оценок по блокам</h3>
-              <p className={styles.chartCopy}>Ширина полосы — средний балл относительно максимума (4). Заливка показывает типы оценок.</p>
+              <p className={styles.chartCopy}>Высота столбика — средний балл относительно максимума (4). Цвета показывают типы оценок.</p>
             </div>
             <div className="badge"><BarChart3 size={14} /> {columns.length} блоков</div>
           </div>
@@ -200,42 +200,40 @@ export function StatisticsView({ session }: StatisticsViewProps) {
                 })}
               </div>
 
-              <div className={styles.barList}>
-                {columns.map((item) => {
-                  const total = item.assessment_count;
-                  return (
-                    <div
-                      key={item.room}
-                      className={styles.barRow}
-                      title={`Ср. балл: ${item.average_score.toFixed(1)}/4. Оценок: ${total}.${item.breakdown ? ` ${item.breakdown}.` : ''}`}
-                    >
-                      <div className={styles.barMeta}>
-                        <span className={styles.barRoom}>Блок {item.room}</span>
-                        <span className={styles.barCount}>{total} оц.</span>
+              <div className={styles.histogramWrap}>
+                <div className={styles.histogram}>
+                  {columns.map((item) => {
+                    const total = item.assessment_count;
+                    const pct = total > 0 ? Math.max(item.average_percent, 5) : 0;
+                    return (
+                      <div
+                        key={item.room}
+                        className={styles.col}
+                        title={`Ср. балл: ${item.average_score.toFixed(1)}/4. Оценок: ${total}.${item.breakdown ? ` ${item.breakdown}.` : ''}`}
+                      >
+                        <div className={styles.colScore}>
+                          {total > 0 ? item.average_score.toFixed(1) : '—'}
+                        </div>
+                        <div className={styles.colBarArea}>
+                          {total > 0 ? (
+                            <div className={styles.colBar} style={{ height: `${pct}%` }}>
+                              {item.segments.map((seg) => (
+                                <div
+                                  key={seg.grade}
+                                  className={styles.colSegment}
+                                  style={{ flex: seg.count, background: seg.meta.solid }}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className={styles.colGhost} />
+                          )}
+                        </div>
+                        <div className={styles.colLabel}>Блок {item.room}</div>
                       </div>
-                      <div className={styles.barTrack}>
-                        {total > 0 ? (
-                          <div className={styles.barFill} style={{ width: `${item.average_percent}%` }}>
-                            {item.segments.map((seg) => (
-                              <div
-                                key={seg.grade}
-                                className={styles.barSegment}
-                                style={{ flex: seg.count, background: seg.meta.solid }}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className={styles.barEmpty} />
-                        )}
-                      </div>
-                      <div className={styles.barScore}>
-                        {total > 0 ? (
-                          <>{item.average_score.toFixed(1)}<span className={styles.barMax}>/4</span></>
-                        ) : '—'}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </>
           ) : (

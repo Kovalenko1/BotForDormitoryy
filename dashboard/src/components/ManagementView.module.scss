@@ -586,6 +586,132 @@
   margin-top: 18px;
 }
 
+/* ── Resident clickable card ─────────────────────────── */
+.residentCardClickable {
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.residentCardClickable:hover {
+  border-color: rgba(122, 255, 167, 0.18);
+  background: rgba(10, 18, 13, 0.94);
+}
+
+/* ── User action modal ───────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 160ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (min-width: 600px) {
+  .modalOverlay {
+    align-items: center;
+  }
+}
+
+.modalPanel {
+  width: min(480px, 100%);
+  border-radius: 24px;
+  border: 1px solid rgba(111, 166, 127, 0.2);
+  background: linear-gradient(180deg, rgba(11, 20, 14, 0.99) 0%, rgba(7, 13, 10, 0.99) 100%);
+  padding: 20px;
+  animation: slideUp 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (min-width: 600px) {
+  .modalPanel {
+    animation: fadeSlide 180ms ease;
+  }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(111, 166, 127, 0.1);
+}
+
+.modalUserInfo {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.modalName {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.modalMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.modalStatus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.modalClose {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(111, 166, 127, 0.16);
+  background: rgba(8, 14, 10, 0.9);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.modalClose:hover {
+  background: rgba(18, 32, 22, 0.96);
+  color: var(--text-primary);
+}
+
+.modalNoActions {
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
 @media (max-width: 1260px) {
   .heroMetrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -622,17 +748,33 @@
     padding: 20px 16px;
   }
 
+  /* Button "История пользователей" — don't stretch to full width */
   .heroTop {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .heroMetrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .heroMetric {
+    padding: 12px;
+  }
+
   .tabsShell {
     padding: 8px 12px;
+  }
+
+  /* Compact tabs — hide hint, reduce min-width */
+  .tabHint {
+    display: none;
+  }
+
+  .tabButton {
+    min-width: 80px;
+    padding: 10px 12px;
   }
 
   .sectionCard,
@@ -649,20 +791,19 @@
     gap: 10px;
   }
 
-  .notificationRow {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+  /* Residents: prevent badge overlap with name */
+  .residentHead {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  .tabButton {
-    min-width: 120px;
-    padding: 10px 12px;
+  .residentBadges {
+    justify-content: flex-start;
+    width: 100%;
   }
 
-  /* 2-column grids on mobile — easier to scan than 1 column */
-  .filterGridPrimary,
-  .filterGridSecondary {
+  /* 2-column filter grid */
+  .filterGridPrimary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -670,8 +811,9 @@
     grid-column: span 2;
   }
 
-  .broadcastGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 1 item in secondary grid — full width */
+  .filterGridSecondary {
+    grid-template-columns: 1fr;
   }
 
   /* 1-column on mobile */
@@ -679,14 +821,31 @@
     grid-template-columns: 1fr;
   }
 
-  /* Keep action buttons side-by-side */
+  /* Action buttons: 2 per row — fits long Russian text better */
   .actionGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .actionButton {
+    font-size: 11px;
+    padding: 9px 10px;
   }
 
   .primaryActions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  /* Broadcast: 2 columns */
+  .broadcastGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Notifications */
+  .notificationRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
 
   .notificationControls {
@@ -708,6 +867,11 @@
 }
 
 @media (max-width: 420px) {
+  .heroMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  /* All filter/broadcast grids collapse to 1 column */
   .filterGridPrimary,
   .filterGridSecondary,
   .broadcastGrid {
@@ -718,7 +882,20 @@
     grid-column: auto;
   }
 
+  /* Resident card head: stack vertically on very small screens */
+  .residentHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .residentBadges {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  /* Single-column action buttons on tiny screens */
   .actionGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
