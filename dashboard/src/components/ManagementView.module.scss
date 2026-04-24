@@ -2,13 +2,21 @@
   display: grid;
   gap: 16px;
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
+  width: 100%;
+}
+
+/* Every direct child of the page grid must not exceed the track width */
+.page > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .hero {
   padding: 24px;
   display: grid;
   gap: 14px;
+  overflow: hidden;
   background:
     radial-gradient(ellipse at top left, rgba(123, 241, 161, 0.16), transparent 38%),
     radial-gradient(ellipse at 90% 20%, rgba(214, 255, 129, 0.09), transparent 24%),
@@ -58,12 +66,21 @@
 
 .tabsShell {
   padding: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .tabs {
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  width: 100%;
+  /* hide scrollbar visually but keep functionality */
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tabButton {
@@ -252,6 +269,8 @@
 
 .sectionCard {
   padding: 18px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sectionCardSoft {
@@ -260,6 +279,8 @@
   border: 1px solid var(--border-subtle);
   background: linear-gradient(180deg, rgba(9, 16, 11, 0.96), rgba(6, 11, 8, 0.96));
   box-shadow: var(--shadow-card);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sectionCardDanger {
