@@ -3,6 +3,8 @@
   min-height: 100dvh;
   color: var(--text-primary);
   position: relative;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .content {

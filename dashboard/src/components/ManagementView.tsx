@@ -577,11 +577,6 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
             <div className={styles.metricValue}>{blackListUsers.length}</div>
             <div className={styles.metricCopy}>Для них рабочие сценарии выключены, но учётная запись остаётся в системе.</div>
           </div>
-          <div className={`surface-panel-soft ${styles.heroMetric}`}>
-            <div className={styles.metricLabel}><Ban className="h-4 w-4" /> Blocked</div>
-            <div className={styles.metricValue}>{blockedUsers.length}</div>
-            <div className={styles.metricCopy}>Полностью заблокированные записи без доступа к dashboard и боту.</div>
-          </div>
         </div>
       </header>
 
