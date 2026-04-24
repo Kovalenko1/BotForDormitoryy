@@ -8,8 +8,9 @@
 .content {
   flex: 1;
   min-width: 0;
-  padding: 22px;
+  padding: 24px;
   overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 .view {
@@ -75,7 +76,7 @@
   }
 
   .content {
-    padding: 12px;
+    padding: 14px 12px calc(var(--bottom-nav-height, 62px) + env(safe-area-inset-bottom, 10px) + 10px);
   }
 
   .overlayCard {

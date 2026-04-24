@@ -1,16 +1,16 @@
 .page {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .hero {
-  padding: 22px;
+  padding: 24px;
   display: grid;
   gap: 14px;
   background:
-    radial-gradient(circle at top left, rgba(123, 241, 161, 0.18), transparent 32%),
-    radial-gradient(circle at 84% 18%, rgba(214, 255, 129, 0.1), transparent 18%),
-    linear-gradient(135deg, rgba(6, 12, 9, 0.98), rgba(9, 17, 12, 0.94));
+    radial-gradient(ellipse at top left, rgba(123, 241, 161, 0.16), transparent 38%),
+    radial-gradient(ellipse at 90% 20%, rgba(214, 255, 129, 0.09), transparent 24%),
+    linear-gradient(155deg, rgba(7, 14, 10, 0.99), rgba(10, 18, 13, 0.96));
 }
 
 .heroTop {
@@ -619,7 +619,7 @@
 
 @media (max-width: 767px) {
   .hero {
-    padding: 18px 16px;
+    padding: 20px 16px;
   }
 
   .heroTop {
@@ -628,7 +628,7 @@
   }
 
   .heroMetrics {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tabsShell,

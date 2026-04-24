@@ -44,66 +44,30 @@ export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
 
   const getNavClassName = (view: ViewType, isActive: boolean) => {
     const names = [styles.navButton];
-    if (view === 'schedule') {
-      names.push(styles.navButtonSchedule);
-    }
-    if (view === 'statistics') {
-      names.push(styles.navButtonStatistics);
-    }
-    if (view === 'management') {
-      names.push(styles.navButtonManagement);
-    }
-    if (isActive) {
-      names.push(styles.navButtonActive);
-    }
+    if (view === 'schedule') names.push(styles.navButtonSchedule);
+    if (view === 'statistics') names.push(styles.navButtonStatistics);
+    if (view === 'management') names.push(styles.navButtonManagement);
+    if (isActive) names.push(styles.navButtonActive);
     return names.join(' ');
   };
 
-  const getMobileChipClassName = (isActive: boolean) => [styles.mobileChip, isActive ? styles.mobileChipActive : ''].join(' ').trim();
-
   return (
     <>
-      <div className={`surface-panel ${styles.mobile}`}>
-        <div className={styles.mobileTop}>
-          <div className={styles.mobileBrand}>
-            <div className={styles.mobileBadge}>
-              <MessageSquare size={18} strokeWidth={2.7} />
-            </div>
-            <div>
-              <p className="eyebrow">Панель общежития</p>
-              <h1 className={styles.brandTitle}>Dormitory Control</h1>
-            </div>
+      {/* ── Mobile: compact sticky header ─────────────────── */}
+      <div className={styles.mobileHeader}>
+        <div className={styles.mobileBrand}>
+          <div className={styles.mobileBadge}>
+            <MessageSquare size={16} strokeWidth={2.7} />
           </div>
-          <div className={styles.mobileProfile}>
-            <p className={styles.profileName}>{session.user.display_name}</p>
-            <p className={styles.profileMeta}>{roleLabel} · {scopeLabel}</p>
-          </div>
+          <h1 className={styles.brandTitle}>Dormitory Control</h1>
         </div>
-
-        <nav className={styles.mobileNav}>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentView === item.id;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => onChangeView(item.id)}
-                className={getMobileChipClassName(isActive)}
-              >
-                <span className={styles.mobileChipIcon}>
-                  <Icon size={18} />
-                </span>
-                <span className={styles.mobileChipText}>
-                  <span className={styles.mobileChipLabel}>{item.label}</span>
-                  <span className={styles.mobileChipHint}>{item.hint}</span>
-                </span>
-              </button>
-            );
-          })}
-        </nav>
+        <div className={styles.mobileUserInfo}>
+          <p className={styles.profileName}>{session.user.display_name}</p>
+          <p className={styles.profileMeta}>{roleLabel} · {scopeLabel}</p>
+        </div>
       </div>
 
+      {/* ── Desktop sidebar ───────────────────────────────── */}
       <aside className={styles.desktop}>
         <div className={styles.desktopInner}>
           <div className={`surface-panel ${styles.brand}`}>
@@ -143,13 +107,34 @@ export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
               <div className={styles.avatar}>{session.user.display_name.slice(0, 1).toUpperCase()}</div>
               <div>
                 <p className={styles.profileName}>{session.user.display_name}</p>
-                  <p className={styles.profileMeta}>{roleLabel} · {scopeLabel}</p>
+                <p className={styles.profileMeta}>{roleLabel} · {scopeLabel}</p>
               </div>
             </div>
             <div className="badge">Доступ: {session.scope === 'all' ? 'все этажи' : 'только свой этаж'}</div>
           </div>
         </div>
       </aside>
+
+      {/* ── Mobile: fixed bottom navigation ───────────────── */}
+      <nav className={styles.bottomNav} aria-label="Навигация">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onChangeView(item.id)}
+              className={`${styles.bottomNavItem}${isActive ? ` ${styles.bottomNavItemActive}` : ''}`}
+            >
+              <span className={styles.bottomNavIcon}>
+                <Icon size={21} />
+              </span>
+              <span className={styles.bottomNavLabel}>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </>
   );
 }
+

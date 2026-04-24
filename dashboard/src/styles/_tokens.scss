@@ -1,16 +1,17 @@
 :root {
+  /* colours */
   --bg-app: #020503;
   --bg-app-accent: #08110c;
   --surface-base: rgba(6, 12, 9, 0.9);
   --surface-soft: rgba(10, 18, 13, 0.78);
   --surface-strong: rgba(14, 24, 18, 0.96);
   --surface-highlight: rgba(22, 39, 29, 0.94);
-  --border-subtle: rgba(108, 148, 121, 0.16);
+  --border-subtle: rgba(108, 148, 121, 0.15);
   --border-strong: rgba(123, 198, 145, 0.28);
   --text-primary: #eef8f0;
   --text-secondary: #a7baad;
   --text-muted: #74897b;
-  --text-dim: #536558;
+  --text-dim: #4e6055;
   --accent-blue: #75f2a5;
   --accent-green: #8affb0;
   --accent-orange: #ffb869;
@@ -19,8 +20,26 @@
   --accent-gold: #d6ff81;
   --success-bg: rgba(30, 91, 54, 0.24);
   --error-bg: rgba(108, 35, 35, 0.24);
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
-  --shadow-soft: 0 30px 90px rgba(0, 0, 0, 0.52);
-  --shadow-card: 0 24px 70px rgba(0, 0, 0, 0.38);
+
+  /* radii */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+
+  /* shadows */
+  --shadow-soft: 0 32px 96px rgba(0, 0, 0, 0.56);
+  --shadow-card: 0 8px 36px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-glow: 0 0 28px rgba(122, 255, 167, 0.16), 0 8px 32px rgba(0, 0, 0, 0.38);
+
+  /* transitions */
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 130ms;
+  --t-base: 200ms;
+
+  /* layout */
+  --bottom-nav-height: 62px;
+  --sidebar-width: 284px;
 }
