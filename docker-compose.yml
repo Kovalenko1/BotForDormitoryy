@@ -43,10 +43,10 @@ services:
     environment:
       WEB_HOST: 0.0.0.0
       WEB_PORT: 8000
-      # WEB_SSL_CERTFILE: ""
-      # WEB_SSL_KEYFILE: ""
-      WEB_SSL_CERTFILE: /etc/letsencrypt/live/dormitory6.duckdns.org
-      WEB_SSL_KEYFILE: /etc/letsencrypt/live/dormitory6.duckdns.org
+      WEB_SSL_CERTFILE: ""
+      WEB_SSL_KEYFILE: ""
+      # WEB_SSL_CERTFILE: /etc/letsencrypt/live/dormitory6.duckdns.org
+      # WEB_SSL_KEYFILE: /etc/letsencrypt/live/dormitory6.duckdns.org
       # WEB_SSL_KEYFILE_PASSWORD: ""
       # WEB_FORCE_HTTPS: "false"
       WEB_FORCE_HTTPS: "true"
@@ -55,9 +55,8 @@ services:
       postgres:
         condition: service_healthy
     ports:
-        # - "8000:8000"
-        - "463:8000"
         - "8080:8000"
+        # - "8443:8000"
     volumes:
         - /etc/letsencrypt:/etc/letsencrypt:ro
     develop:
