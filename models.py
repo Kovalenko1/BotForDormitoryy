@@ -90,6 +90,20 @@ class FailedNotification(Base):
     timestamp = Column(DateTime, default=moscow_now, nullable=False)
 
 
+class DeliveryErrorNotificationPreference(Base):
+    __tablename__ = 'delivery_error_notification_preferences'
+    __table_args__ = (
+        UniqueConstraint('starosta_chat_id', 'target_chat_id', name='uq_delivery_error_notification_preference'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    starosta_chat_id = Column(String, nullable=False, index=True)
+    target_chat_id = Column(String, nullable=True, index=True)
+    enabled = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=moscow_now, nullable=False)
+    updated_at = Column(DateTime, default=moscow_now, nullable=False)
+
+
 class FloorNotificationSetting(Base):
     __tablename__ = 'floor_notification_settings'
 

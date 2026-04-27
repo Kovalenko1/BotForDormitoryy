@@ -3,6 +3,7 @@ import type {
   AccessKeyResponse,
   BroadcastResponse,
   DashboardOverviewResponse,
+  DashboardProfileResponse,
   DashboardSessionResponse,
   DutyAssessmentGrade,
   DutyAssessmentResponse,
@@ -20,6 +21,15 @@ import type {
 export const dashboardApi = {
   getSession() {
     return apiRequest<DashboardSessionResponse>('/api/session');
+  },
+  getProfile() {
+    return apiRequest<DashboardProfileResponse>('/api/profile');
+  },
+  updateProfileRoom(room: string) {
+    return apiRequest<DashboardProfileResponse>('/api/profile/room', {
+      method: 'PUT',
+      body: JSON.stringify({ room }),
+    });
   },
   getOverview() {
     return apiRequest<DashboardOverviewResponse>('/api/dashboard/overview');
@@ -64,8 +74,8 @@ export const dashboardApi = {
     const suffix = query.toString();
     return apiRequest<UsersResponse>(`/api/users${suffix ? `?${suffix}` : ''}`);
   },
-  getUserFootprint(chatId: string) {
-    return apiRequest<UserFootprintResponse>(`/api/users/${encodeURIComponent(chatId)}/footprint`);
+  getUserFootprint(chatId: string, limit = 500) {
+    return apiRequest<UserFootprintResponse>(`/api/users/${encodeURIComponent(chatId)}/footprint?limit=${limit}`);
   },
   getDutyCalendar(params: { floor?: number | null; year?: number; month?: number } = {}) {
     const query = new URLSearchParams();
@@ -144,7 +154,7 @@ export const dashboardApi = {
       body: JSON.stringify({ role }),
     });
   },
-  updateUserAccess(chatId: string, payload: { is_blocked?: boolean; is_whitelisted?: boolean }) {
+  updateUserAccess(chatId: string, payload: { is_whitelisted: boolean }) {
     return apiRequest(`/api/management/users/${encodeURIComponent(chatId)}/access`, {
       method: 'PUT',
       body: JSON.stringify(payload),

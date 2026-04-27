@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, MessageCircle, Users } from 'lucide-react';
 import { ApiError, dashboardApi } from '../api';
 import { formatMoscowDateTime } from '../lib/time';
@@ -67,35 +67,43 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       label: 'Жильцов в доступе',
       value: data.summary.users_count,
       icon: Users,
-      color: '#8fc4ff',
-      surface: 'rgba(143, 196, 255, 0.16)',
+      tone: 'blue',
       targetView: 'management' as ViewType,
     },
     {
       label: 'Событий бота',
       value: data.summary.bot_logs_count,
       icon: Activity,
-      color: '#91d9b3',
-      surface: 'rgba(145, 217, 179, 0.16)',
+      tone: 'green',
       targetView: 'general' as ViewType,
     },
     {
       label: 'Сообщений',
       value: data.summary.messages_count,
       icon: MessageCircle,
-      color: '#ffb869',
-      surface: 'rgba(255, 184, 105, 0.16)',
+      tone: 'orange',
       targetView: 'general' as ViewType,
     },
     {
       label: 'Ошибок отправки',
       value: data.summary.failed_count,
       icon: AlertTriangle,
-      color: '#ff8d82',
-      surface: 'rgba(255, 141, 130, 0.16)',
-      targetView: 'errors' as ViewType,
+      tone: 'red',
+      targetView: 'general' as ViewType,
+      logFilter: 'errors' as const,
     },
   ];
+
+  const navigateFromStat = (targetView: ViewType, logFilter?: 'errors') => {
+    if (logFilter) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('log_filter', logFilter);
+      window.history.replaceState({}, '', url);
+      window.dispatchEvent(new CustomEvent('dashboard-log-filter', { detail: logFilter }));
+    }
+
+    onNavigate(targetView);
+  };
 
   return (
     <div className={styles.page}>
@@ -105,7 +113,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           return (
             <button
               key={stat.label}
-              onClick={() => onNavigate(stat.targetView)}
+              onClick={() => navigateFromStat(stat.targetView, stat.logFilter)}
               className={`surface-panel ${styles.statCard}`}
             >
               <div className={styles.statRow}>
@@ -113,8 +121,8 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                   <p className={styles.statLabel}>{stat.label}</p>
                   <p className={styles.statValue}>{stat.value}</p>
                 </div>
-                <div className={styles.statIcon} style={{ background: stat.surface }}>
-                  <Icon className="w-6 h-6" style={{ color: stat.color }} />
+                <div className={[styles.statIcon, styles[`statIcon${stat.tone[0].toUpperCase()}${stat.tone.slice(1)}`]].join(' ')}>
+                  <Icon size={24} />
                 </div>
               </div>
             </button>
@@ -137,7 +145,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           <div className={styles.feed}>
             {data.recent_activity.map((item) => (
               <article key={item.id} className={styles.feedItem}>
-                <div className={styles.feedDot} style={{ background: '#91d9b3' }} />
+                <div className={[styles.feedDot, styles.feedDotSuccess].join(' ')} />
                 <div>
                   <p className={styles.feedTitle}>{item.title}</p>
                   <p className={styles.feedSubtitle}>{item.subtitle}</p>
@@ -158,15 +166,15 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
               <h3 className={styles.sectionTitle}>Сигналы о сбоях</h3>
               <p className={styles.sectionCopy}>Ошибки доставки и другие сбои, на которые стоит обратить внимание в первую очередь.</p>
             </div>
-            <button onClick={() => onNavigate('errors')} className="button-ghost">
-              Перейти к сбоям
+            <button onClick={() => navigateFromStat('general', 'errors')} className="button-ghost">
+              Открыть ошибки в журнале
             </button>
           </div>
 
           <div className={styles.feed}>
             {data.recent_errors.map((item) => (
               <article key={item.id} className={styles.feedItem}>
-                <div className={styles.feedDot} style={{ background: '#ff8d82' }} />
+                <div className={[styles.feedDot, styles.feedDotDanger].join(' ')} />
                 <div>
                   <p className={styles.feedTitle}>{item.message}</p>
                   <p className={styles.feedText}>{item.context}</p>

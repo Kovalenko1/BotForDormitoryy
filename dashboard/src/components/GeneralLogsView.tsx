@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Activity, ArrowRightLeft, MessageSquare } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { useEffect, useMemo, useState } from 'react';
+import { Activity, AlertTriangle, ArrowRightLeft, MessageSquare } from 'lucide-react';
 import { ApiError, dashboardApi } from '../api';
 import { formatMoscowDateTime } from '../lib/time';
 import type { GeneralLogItem } from '../types';
+import styles from './GeneralLogsView.module.scss';
+
+type GeneralLogFilter = 'all' | 'event' | 'incoming' | 'outgoing' | 'errors';
 
 export function GeneralLogsView() {
   const [logs, setLogs] = useState<GeneralLogItem[]>([]);
+  const [filter, setFilter] = useState<GeneralLogFilter>(() => (
+    new URLSearchParams(window.location.search).get('log_filter') === 'errors' ? 'errors' : 'all'
+  ));
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -33,58 +38,111 @@ export function GeneralLogsView() {
     };
   }, []);
 
+  const handleFilterChange = (nextFilter: GeneralLogFilter) => {
+    setFilter(nextFilter);
+
+    const url = new URL(window.location.href);
+    if (nextFilter === 'errors') {
+      url.searchParams.set('log_filter', 'errors');
+    } else {
+      url.searchParams.delete('log_filter');
+    }
+    window.history.replaceState({}, '', url);
+  };
+
+  useEffect(() => {
+    const handleExternalFilter = (event: Event) => {
+      const nextFilter = (event as CustomEvent<GeneralLogFilter>).detail;
+      if (nextFilter) {
+        setFilter(nextFilter);
+      }
+    };
+
+    window.addEventListener('dashboard-log-filter', handleExternalFilter);
+    return () => window.removeEventListener('dashboard-log-filter', handleExternalFilter);
+  }, []);
+
+  const filteredLogs = useMemo(() => logs.filter((log) => {
+    if (filter === 'all') {
+      return true;
+    }
+
+    if (filter === 'errors') {
+      return Boolean(log.error_message) || log.status === 'не доставлено';
+    }
+
+    return log.type === filter;
+  }), [filter, logs]);
+
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-4 pb-8 pt-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="mb-8 flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#808080] font-semibold">Живой журнал событий и сообщений.</p>
-        <h2 className="text-3xl font-serif italic text-white tracking-tight">Лента системы</h2>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Живой журнал событий и сообщений.</p>
+        <h2 className={styles.title}>Лента системы</h2>
       </header>
 
-      <div className="bg-[#0C0C0C] border border-[#1F1F1F] rounded-2xl overflow-hidden">
-        <div className="divide-y divide-[#1F1F1F]">
+      <div className={styles.filters}>
+        {[
+          ['all', 'Все события'],
+          ['event', 'Система'],
+          ['incoming', 'Входящие'],
+          ['outgoing', 'Исходящие'],
+          ['errors', 'Ошибки'],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleFilterChange(value as GeneralLogFilter)}
+            className={[styles.filterButton, filter === value ? styles.filterButtonActive : ''].join(' ').trim()}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.logShell}>
+        <div className={styles.logList}>
           {errorMessage && (
-            <div className="p-5 text-[#FF6B57] bg-[#2A1616]/40">{errorMessage}</div>
+            <div className={styles.errorRow}>{errorMessage}</div>
           )}
 
-          {logs.map((log) => {
+          {filteredLogs.map((log) => {
             const isBotEvent = log.type === 'event';
             const isIncoming = log.type === 'incoming';
             const isOutgoing = log.type === 'outgoing';
             const isError = log.status === 'не доставлено';
 
             return (
-              <div key={log.id} className="flex gap-4 p-4 transition-colors hover:bg-[#111111] sm:gap-5 sm:p-5">
-                <div className="mt-1 flex-shrink-0 opacity-70">
-                  {isBotEvent && <Activity className="w-5 h-5 text-[#34C759]" />}
-                  {isIncoming && <MessageSquare className="w-5 h-5 text-[#808080]" />}
-                  {isOutgoing && <ArrowRightLeft className="w-5 h-5 text-[#E0E0E0]" />}
+              <div key={log.id} className={styles.logItem}>
+                <div className={styles.iconCell}>
+                  {isError ? <AlertTriangle className={styles.iconDanger} size={20} /> : null}
+                  {!isError && isBotEvent && <Activity className={styles.iconSuccess} size={20} />}
+                  {!isError && isIncoming && <MessageSquare className={styles.iconMuted} size={20} />}
+                  {!isError && isOutgoing && <ArrowRightLeft className={styles.iconPrimary} size={20} />}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-                    <p className="text-sm font-semibold text-[#B0B0B0]">
+                <div className={styles.content}>
+                  <div className={styles.itemHeader}>
+                    <p className={styles.itemTitle}>
                       {log.title}
                     </p>
-                    <time className="text-[10px] text-[#505050] font-mono flex-shrink-0">
+                    <time className={styles.time}>
                       {formatMoscowDateTime(log.timestamp)}
                     </time>
                   </div>
 
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#505050] mt-2">{log.subtitle}</p>
+                  <p className={styles.subtitle}>{log.subtitle}</p>
 
-                  <div className="mt-2">
-                    <p className={cn(
-                      'text-sm leading-relaxed',
-                      isBotEvent ? 'text-[#808080] font-mono' : 'text-[#E0E0E0]'
-                    )}>
+                  <div className={styles.textWrap}>
+                    <p className={[styles.text, isBotEvent ? styles.eventText : ''].join(' ').trim()}>
                       {log.text}
                     </p>
                   </div>
 
                   {isError && (
-                    <div className="mt-3 p-3 bg-[#2A1616]/50 border border-[#FF3B30]/30 rounded-xl">
-                      <p className="text-[11px] text-[#A0A0A0]">
-                        Ошибка: <span className="text-[#FF3B30] font-mono uppercase">{log.error_message}</span>
+                    <div className={styles.errorBox}>
+                      <p className={styles.errorText}>
+                        Ошибка: <span className={styles.errorValue}>{log.error_message}</span>
                       </p>
                     </div>
                   )}
@@ -93,8 +151,8 @@ export function GeneralLogsView() {
             );
           })}
 
-          {!errorMessage && logs.length === 0 && (
-            <div className="p-10 text-center text-[#505050]">В доступной вам зоне пока нет новых записей.</div>
+          {!errorMessage && filteredLogs.length === 0 && (
+            <div className={styles.empty}>В доступной вам зоне пока нет новых записей.</div>
           )}
         </div>
       </div>

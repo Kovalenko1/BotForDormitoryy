@@ -9,12 +9,14 @@ export class ApiError extends Error {
   }
 }
 
-function buildHeaders(includeJson = false) {
-  const headers = new Headers({
-    Accept: 'application/json',
-  });
+function buildHeaders(includeJson = false, initHeaders?: HeadersInit) {
+  const headers = new Headers(initHeaders);
 
-  if (includeJson) {
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+
+  if (includeJson && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -34,9 +36,10 @@ function buildHeaders(includeJson = false) {
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const includeJson = init.body !== undefined;
+  const { headers, ...requestInit } = init;
   const response = await fetch(path, {
-    ...init,
-    headers: buildHeaders(includeJson),
+    ...requestInit,
+    headers: buildHeaders(includeJson, headers),
   });
 
   if (!response.ok) {

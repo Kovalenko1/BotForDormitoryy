@@ -12,16 +12,25 @@ from config import (
 )
 
 
-def _normalize_optional_path(value: str) -> str | None:
+def _normalize_optional_path(value: str, default_filename: str | None = None) -> str | None:
     normalized = value.strip()
     if not normalized:
         return None
-    return str(Path(normalized).expanduser())
+
+    path = Path(normalized).expanduser()
+    if (
+        default_filename
+        and path.name not in {'fullchain.pem', 'cert.pem', 'privkey.pem', 'key.pem'}
+        and path.suffix.lower() != '.pem'
+    ):
+        path = path / default_filename
+
+    return str(path)
 
 
 def main():
-    certfile = _normalize_optional_path(WEB_SSL_CERTFILE)
-    keyfile = _normalize_optional_path(WEB_SSL_KEYFILE)
+    certfile = _normalize_optional_path(WEB_SSL_CERTFILE, 'fullchain.pem')
+    keyfile = _normalize_optional_path(WEB_SSL_KEYFILE, 'privkey.pem')
 
     if bool(certfile) != bool(keyfile):
         raise RuntimeError("WEB_SSL_CERTFILE and WEB_SSL_KEYFILE must be set together.")

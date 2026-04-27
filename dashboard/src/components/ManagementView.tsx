@@ -1,7 +1,7 @@
-import React, { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowUpRight,
-  Ban,
   Clock3,
   Crown,
   KeyRound,
@@ -31,7 +31,7 @@ interface ManagementViewProps {
 }
 
 type ManagementTab = 'roles' | 'residents' | 'access' | 'notifications' | 'broadcast';
-type AccessFilter = 'all' | 'white' | 'black' | 'blocked';
+type AccessFilter = 'all' | 'white' | 'black';
 
 const roleLabels: Record<string, string> = {
   admin: 'Админ',
@@ -106,34 +106,18 @@ function filterUsers(
       return false;
     }
 
-    if (access === 'blocked' && !user.is_blocked) {
-      return false;
-    }
-
     return true;
   });
 }
 
-function getStatusPillStyle(user: UserListItem) {
+function getStatusPillClassName(user: UserListItem) {
   if (user.is_blocked) {
-    return {
-      borderColor: 'rgba(255, 132, 117, 0.4)',
-      background: 'rgba(49, 25, 24, 0.9)',
-      color: '#ff9f93',
-    };
+    return [styles.statusPill, styles.statusPillBlocked].join(' ');
   }
 
   return user.is_whitelisted
-    ? {
-        borderColor: 'rgba(157, 212, 181, 0.3)',
-        background: 'rgba(18, 37, 28, 0.9)',
-        color: '#93ddb1',
-      }
-    : {
-        borderColor: 'rgba(111, 166, 127, 0.18)',
-        background: 'rgba(11, 18, 13, 0.92)',
-        color: '#a7baad',
-      };
+    ? [styles.statusPill, styles.statusPillWhite].join(' ')
+    : [styles.statusPill, styles.statusPillBlack].join(' ');
 }
 
 export function ManagementView({ session, onNavigate }: ManagementViewProps) {
@@ -169,26 +153,24 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
   const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserListItem | null>(null);
 
-  useEffect(() => {
-    const tabs: ManagementTab[] = [];
-    if (session.permissions.can_manage_roles) {
-      tabs.push('roles');
-    }
-    tabs.push('residents');
-    if (session.permissions.can_manage_user_access) {
-      tabs.push('access');
-    }
-    if (session.permissions.can_manage_notifications) {
-      tabs.push('notifications');
-    }
-    if (session.permissions.can_broadcast) {
-      tabs.push('broadcast');
-    }
+  const tabs = useMemo(() => [
+    session.permissions.can_manage_roles ? { id: 'roles' as const, label: 'Роли', hint: 'Ключи и staff' } : null,
+    { id: 'residents' as const, label: 'Жильцы', hint: 'Фильтры и статусы' },
+    session.permissions.can_manage_user_access ? { id: 'access' as const, label: 'Списки доступа', hint: 'White / black list' } : null,
+    session.permissions.can_manage_notifications ? { id: 'notifications' as const, label: 'Уведомления', hint: 'Время по этажам' } : null,
+    session.permissions.can_broadcast ? { id: 'broadcast' as const, label: 'Рассылка', hint: 'Массовые сообщения' } : null,
+  ].filter(Boolean) as Array<{ id: ManagementTab; label: string; hint: string }>, [
+    session.permissions.can_broadcast,
+    session.permissions.can_manage_notifications,
+    session.permissions.can_manage_roles,
+    session.permissions.can_manage_user_access,
+  ]);
 
-    if (!tabs.includes(activeTab)) {
-      setActiveTab(tabs[0] ?? 'residents');
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id ?? 'residents');
     }
-  }, [activeTab, session.permissions]);
+  }, [activeTab, tabs]);
 
   useEffect(() => {
     let isActive = true;
@@ -278,28 +260,19 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
     };
   }, [settingsReloadToken, session.permissions.can_manage_notifications]);
 
-  const allUsers = directory?.items ?? [];
-  const visibleUsers = filterUsers(allUsers, {
+  const allUsers = useMemo(() => directory?.items ?? [], [directory]);
+  const visibleUsers = useMemo(() => filterUsers(allUsers, {
     search: deferredSearch,
     role: roleFilter,
     floor: floorFilter,
     hasRoom: hasRoomFilter,
     access: accessFilter,
-  });
-  const whiteListUsers = allUsers.filter((user) => user.is_whitelisted);
-  const blackListUsers = allUsers.filter((user) => !user.is_whitelisted);
-  const blockedUsers = allUsers.filter((user) => user.is_blocked);
-  const admins = rolesData?.admins ?? allUsers.filter((user) => user.role === 'admin');
-  const chairmen = rolesData?.chairmen ?? allUsers.filter((user) => user.role === 'chairman');
-  const starostas = rolesData?.starostas ?? allUsers.filter((user) => user.role === 'starosta');
-
-  const tabs = [
-    session.permissions.can_manage_roles ? { id: 'roles' as const, label: 'Роли', hint: 'Ключи и staff' } : null,
-    { id: 'residents' as const, label: 'Жильцы', hint: 'Фильтры и статусы' },
-    session.permissions.can_manage_user_access ? { id: 'access' as const, label: 'Списки доступа', hint: 'White / black list' } : null,
-    session.permissions.can_manage_notifications ? { id: 'notifications' as const, label: 'Уведомления', hint: 'Время по этажам' } : null,
-    session.permissions.can_broadcast ? { id: 'broadcast' as const, label: 'Рассылка', hint: 'Массовые сообщения' } : null,
-  ].filter(Boolean) as Array<{ id: ManagementTab; label: string; hint: string }>;
+  }), [accessFilter, allUsers, deferredSearch, floorFilter, hasRoomFilter, roleFilter]);
+  const whiteListUsers = useMemo(() => allUsers.filter((user) => user.is_whitelisted), [allUsers]);
+  const blackListUsers = useMemo(() => allUsers.filter((user) => !user.is_whitelisted), [allUsers]);
+  const admins = useMemo(() => rolesData?.admins ?? allUsers.filter((user) => user.role === 'admin'), [allUsers, rolesData?.admins]);
+  const chairmen = useMemo(() => rolesData?.chairmen ?? allUsers.filter((user) => user.role === 'chairman'), [allUsers, rolesData?.chairmen]);
+  const starostas = useMemo(() => rolesData?.starostas ?? allUsers.filter((user) => user.role === 'starosta'), [allUsers, rolesData?.starostas]);
 
   const rememberSuccess = (message: string) => {
     setActionMessage(message);
@@ -338,7 +311,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
     }
   };
 
-  const handleAccessUpdate = async (chatId: string, payload: { is_blocked?: boolean; is_whitelisted?: boolean }, successMessage: string) => {
+  const handleAccessUpdate = async (chatId: string, payload: { is_whitelisted: boolean }, successMessage: string) => {
     try {
       await dashboardApi.updateUserAccess(chatId, payload);
       rememberSuccess(successMessage);
@@ -444,15 +417,6 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
             >
               Чёрный список
             </button>
-            <button
-              onClick={() => handleAccessUpdate(user.chat_id, { is_blocked: !user.is_blocked }, user.is_blocked ? `${user.display_name} разблокирован.` : `${user.display_name} заблокирован.`)}
-              className={[
-                styles.actionButton,
-                user.is_blocked ? styles.actionButtonAccent : styles.actionButtonDanger,
-              ].join(' ')}
-            >
-              {user.is_blocked ? 'Разблокировать' : 'Заблокировать'}
-            </button>
           </div>
         )}
       </div>
@@ -466,7 +430,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
           <p className={`${styles.roleName} ${styles.textBreak}`}>{user.display_name}</p>
           <div className={`${styles.roleMeta} ${styles.textBreak}`}>{user.chat_id}</div>
         </div>
-        <div className={styles.statusPill} style={getStatusPillStyle(user)}>
+        <div className={getStatusPillClassName(user)}>
           {user.is_whitelisted ? 'White' : 'Black'}
         </div>
       </div>
@@ -505,10 +469,10 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
       <div className={styles.listGrid}>
         {users.map((user) => (
           <div key={user.chat_id} className={styles.listItem}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className={styles.accessUserRow}>
               <div>
                 <div className={styles.roleTagRow}>
-                  <span className="text-sm font-medium text-white">{user.display_name}</span>
+                  <span className={styles.accessUserName}>{user.display_name}</span>
                   <span className={styles.roleBadge}>
                     {roleLabels[user.role] ?? user.role}
                   </span>
@@ -549,7 +513,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
     <div className={styles.page}>
       <header className={`surface-panel ${styles.hero}`}>
         <div className={styles.heroTop}>
-          <div className="max-w-2xl">
+          <div className={styles.heroTitleBlock}>
             <p className="eyebrow">Роли, доступ и коммуникация</p>
           </div>
 
@@ -557,23 +521,23 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
             onClick={() => onNavigate('users')}
             className="button-secondary"
           >
-            История пользователей <ArrowUpRight className="h-4 w-4" />
+            История пользователей <ArrowUpRight size={16} />
           </button>
         </div>
 
         <div className={styles.heroMetrics}>
           <div className={`surface-panel-soft ${styles.heroMetric}`}>
-            <div className={styles.metricLabel}><Crown className="h-4 w-4" /> Staff</div>
+            <div className={styles.metricLabel}><Crown size={16} /> Staff</div>
             <div className={styles.metricValue}>{admins.length + chairmen.length + starostas.length}</div>
             <div className={styles.metricCopy}>Админы, председатели и старосты, которые держат рабочий контур.</div>
           </div>
           <div className={`surface-panel-soft ${styles.heroMetric}`}>
-            <div className={styles.metricLabel}><ShieldCheck className="h-4 w-4" /> White List</div>
+            <div className={styles.metricLabel}><ShieldCheck size={16} /> White List</div>
             <div className={styles.metricValue}>{whiteListUsers.length}</div>
             <div className={styles.metricCopy}>Эти пользователи видят календарь и получают плановые уведомления.</div>
           </div>
           <div className={`surface-panel-soft ${styles.heroMetric}`}>
-            <div className={styles.metricLabel}><ShieldX className="h-4 w-4" /> Black List</div>
+            <div className={styles.metricLabel}><ShieldX size={16} /> Black List</div>
             <div className={styles.metricValue}>{blackListUsers.length}</div>
             <div className={styles.metricCopy}>Для них рабочие сценарии выключены, но учётная запись остаётся в системе.</div>
           </div>
@@ -606,7 +570,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
           <section className={`surface-panel ${styles.sectionCard}`}>
             <div className={styles.sectionLead}>
               <div className={styles.sectionIcon}>
-                <KeyRound className="h-5 w-5" />
+                <KeyRound size={20} />
               </div>
               <div>
                 <h3 className={styles.sectionTitle}>Пригласительные ключи</h3>
@@ -647,7 +611,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
             <div className={styles.sectionHeaderBlock}>
               <div className={styles.sectionLead}>
                 <div className={styles.sectionIcon}>
-                <UserCog className="h-5 w-5" />
+                <UserCog size={20} />
                 </div>
                 <div>
                   <h3 className={styles.sectionTitle}>Текущие роли</h3>
@@ -660,19 +624,19 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
 
             <div className={styles.rolesGrid}>
               <div className={styles.roleColumn}>
-                <div className={styles.roleHeading}><Crown className="h-4 w-4 text-[#ffce8a]" /> Админы</div>
+                <div className={styles.roleHeading}><Crown className={styles.roleIconAdmin} size={16} /> Админы</div>
                 {admins.length > 0 ? admins.map((user) => renderMiniUserCard(user, styles.roleCardAdmin)) : (
                   <div className={styles.emptyState}>Админы не найдены.</div>
                 )}
               </div>
               <div className={styles.roleColumn}>
-                <div className={styles.roleHeading}><ShieldCheck className="h-4 w-4 text-[#93ddb1]" /> Председатели</div>
+                <div className={styles.roleHeading}><ShieldCheck className={styles.roleIconChairman} size={16} /> Председатели</div>
                 {chairmen.length > 0 ? chairmen.map((user) => renderMiniUserCard(user, styles.roleCardChairman)) : (
                   <div className={styles.emptyState}>Председателей пока нет.</div>
                 )}
               </div>
               <div className={styles.roleColumn}>
-                <div className={styles.roleHeading}><Users className="h-4 w-4 text-[#98ddc7]" /> Старосты</div>
+                <div className={styles.roleHeading}><Users className={styles.roleIconStarosta} size={16} /> Старосты</div>
                 {starostas.length > 0 ? starostas.map((user) => renderMiniUserCard(user, styles.roleCardStarosta)) : (
                   <div className={styles.emptyState}>Старост пока нет.</div>
                 )}
@@ -743,7 +707,6 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
               <option value="all">Любой доступ</option>
               <option value="white">Белый список</option>
               <option value="black">Чёрный список</option>
-              <option value="blocked">Только заблокированные</option>
             </select>
           </div>
 
@@ -766,7 +729,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
                     <span className={styles.roleBadge}>
                       {roleLabels[user.role] ?? user.role}
                     </span>
-                    <span className={styles.statusPill} style={getStatusPillStyle(user)}>
+                    <span className={getStatusPillClassName(user)}>
                       {user.is_blocked ? 'Blocked' : user.is_whitelisted ? 'White' : 'Black'}
                     </span>
                   </div>
@@ -812,7 +775,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
         <section className={styles.sectionCardSoft}>
           <div className={styles.sectionLead}>
             <div className={styles.sectionIcon}>
-              <Clock3 className="h-5 w-5" />
+              <Clock3 size={20} />
             </div>
             <div>
               <h3 className={styles.sectionTitle}>Время уведомлений</h3>
@@ -856,7 +819,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
         <section className={styles.sectionCardSoft}>
           <div className={styles.sectionLead}>
             <div className={styles.sectionIcon}>
-              <Megaphone className="h-5 w-5" />
+              <Megaphone size={20} />
             </div>
             <div>
               <h3 className={styles.sectionTitle}>Рассылка</h3>
@@ -935,15 +898,14 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
               disabled={broadcastLoading}
               className="button"
             >
-              <Send className="h-4 w-4" />
+              <Send size={16} />
               {broadcastLoading ? 'Отправляю...' : 'Запустить рассылку'}
             </button>
           </div>
         </section>
       )}
 
-      {/* User action modal */}
-      {selectedUser && (
+      {selectedUser && createPortal(
         <div className={styles.modalOverlay} onClick={() => setSelectedUser(null)}>
           <div className={styles.modalPanel} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
@@ -951,7 +913,7 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
                 <h3 className={styles.modalName}>{selectedUser.display_name}</h3>
                 <div className={styles.modalMeta}>
                   <span className={styles.roleBadge}>{roleLabels[selectedUser.role] ?? selectedUser.role}</span>
-                  <span className={styles.statusPill} style={getStatusPillStyle(selectedUser)}>
+                  <span className={getStatusPillClassName(selectedUser)}>
                     {selectedUser.is_blocked ? 'Blocked' : selectedUser.is_whitelisted ? 'White' : 'Black'}
                   </span>
                 </div>
@@ -967,7 +929,8 @@ export function ManagementView({ session, onNavigate }: ManagementViewProps) {
               <div className={styles.modalNoActions}>Действия недоступны для этой роли.</div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

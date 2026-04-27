@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Award,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -9,13 +10,14 @@ import {
   GripVertical,
   Plus,
   Save,
+  Trophy,
   Trash2,
   X,
 } from 'lucide-react';
 import { ApiError, dashboardApi } from '../api';
 import { DUTY_GRADE_ORDER, getDutyGradeMeta } from '../lib/duty';
 import { formatMoscowDateTime } from '../lib/time';
-import type { DashboardSessionResponse, DutyAssessmentGrade, DutyCalendarDay, DutyCalendarResponse } from '../types';
+import type { DashboardSessionResponse, DutyAssessment, DutyAssessmentGrade, DutyCalendarDay, DutyCalendarResponse } from '../types';
 import styles from './ScheduleView.module.scss';
 
 interface ScheduleViewProps {
@@ -72,6 +74,20 @@ function getPreferredFloor(session: DashboardSessionResponse) {
   }
 
   return session.accessible_floors[0] ?? null;
+}
+
+function getUserBlock(room: string | null) {
+  if (!room) {
+    return null;
+  }
+
+  const normalized = room.trim().replace(/\s/g, '').toUpperCase();
+  const match = normalized.match(/^(\d{3,4})/);
+  return match?.[1] ?? null;
+}
+
+function getGradeToneClassName(grade: DutyAssessmentGrade) {
+  return styles[`grade${grade[0].toUpperCase()}${grade.slice(1)}`];
 }
 
 export function ScheduleView({ session }: ScheduleViewProps) {
@@ -160,6 +176,9 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     () => data?.days.find((day) => day.date === selectedDate && day.room) ?? null,
     [data, selectedDate],
   );
+  const mobileAgendaDay = selectedDay ?? dutyToday;
+  const isRegularUser = session.user.role === 'user';
+  const userBlock = useMemo(() => getUserBlock(session.user.room), [session.user.room]);
 
   useEffect(() => {
     if (!selectedDay) {
@@ -174,7 +193,7 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     setAssessmentNote(selectedDay.assessment?.note ?? '');
     setAssessmentMessage('');
     setAssessmentError('');
-  }, [selectedDay]);
+  }, [selectedDay?.date]);
 
   const changeMonth = (delta: number) => {
     const current = new Date(year, month - 1 + delta, 1);
@@ -239,7 +258,22 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     }
   };
 
-  const saveAssessment = async () => {
+  const updateDayAssessment = (dutyDate: string, assessment: DutyAssessment) => {
+    setData((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        days: current.days.map((day) => (
+          day.date === dutyDate ? { ...day, assessment } : day
+        )),
+      };
+    });
+  };
+
+  const upsertAssessment = async (grade: DutyAssessmentGrade, note: string | undefined, successMessage: string) => {
     if (!selectedDay || selectedFloor === null) {
       return;
     }
@@ -249,18 +283,42 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     setAssessmentError('');
 
     try {
-      await dashboardApi.upsertDutyAssessment(
+      const payload = await dashboardApi.upsertDutyAssessment(
         selectedFloor,
         selectedDay.date,
-        assessmentGrade,
-        assessmentNote.trim() || undefined,
+        grade,
+        note,
       );
-      setAssessmentMessage('Оценка сохранена и сразу попадёт в статистику.');
+      updateDayAssessment(payload.duty_date, payload.assessment);
+      setAssessmentMessage(successMessage);
       setReloadToken((value) => value + 1);
     } catch (error) {
       setAssessmentError(error instanceof ApiError ? error.message : 'Не удалось сохранить оценку дежурства.');
+      throw error;
     } finally {
       setAssessmentSaving(false);
+    }
+  };
+
+  const handleGradeSelect = async (grade: DutyAssessmentGrade) => {
+    if (!selectedDay || assessmentSaving) {
+      return;
+    }
+
+    const previousGrade = assessmentGrade;
+    setAssessmentGrade(grade);
+
+    try {
+      await upsertAssessment(grade, selectedDay.assessment?.note?.trim() || undefined, 'Оценка выставлена.');
+    } catch {
+      setAssessmentGrade(previousGrade);
+    }
+  };
+
+  const saveAssessmentComment = async () => {
+    try {
+      await upsertAssessment(assessmentGrade, assessmentNote.trim() || undefined, 'Комментарий сохранён.');
+    } catch {
     }
   };
 
@@ -304,6 +362,46 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     setDragOverIndex(null);
   };
 
+  const renderPersonalRating = () => {
+    const rating = data?.personal_rating;
+    if (!rating) {
+      return null;
+    }
+
+    return (
+      <div className={styles.ratingCard}>
+        <div className={styles.ratingTop}>
+          <div>
+            <div className={styles.metricLabel}><Trophy size={14} /> Персональный рейтинг блока</div>
+            <div className={styles.ratingTitle}>#{rating.rank} · уровень {rating.level}</div>
+            <div className={styles.metricNote}>Блок {rating.room}: {rating.level_title}</div>
+          </div>
+          <div className={styles.ratingScore}>{rating.average_score.toFixed(1)}</div>
+        </div>
+
+        <div className={styles.levelBar} aria-label={`Прогресс уровня ${rating.level_progress}%`}>
+          <span style={{ width: `${rating.level_progress}%` }} />
+        </div>
+        <div className={styles.ratingMeta}>
+          <span>{rating.xp} XP</span>
+          <span>до уровня: {rating.next_level_xp} XP</span>
+        </div>
+
+        {rating.achievements.length > 0 ? (
+          <div className={styles.achievementList}>
+            {rating.achievements.slice(0, 4).map((achievement) => (
+              <span key={achievement.id} className={styles.achievementPill} title={achievement.description}>
+                <Award size={12} /> {achievement.title}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.metricNote}>Достижения появятся после первых оценённых дежурств.</div>
+        )}
+      </div>
+    );
+  };
+
   const renderDayMenu = (day: DutyCalendarDay, compact = false) => {
     if (!selectedDay || selectedDay.date !== day.date) {
       return null;
@@ -341,11 +439,11 @@ export function ScheduleView({ session }: ScheduleViewProps) {
                   <button
                     key={grade}
                     type="button"
-                    className={[styles.gradeButton, isActive ? styles.gradeActive : ''].join(' ').trim()}
-                    onClick={() => setAssessmentGrade(grade)}
-                    style={{ borderColor: isActive ? meta.border : undefined, background: isActive ? meta.surface : undefined }}
+                    className={[styles.gradeButton, getGradeToneClassName(grade), isActive ? styles.gradeActive : ''].join(' ').trim()}
+                    onClick={() => { void handleGradeSelect(grade); }}
+                    disabled={assessmentSaving}
                   >
-                    <span className={styles.gradeLabel} style={{ color: meta.color }}>{meta.label}</span>
+                    <span className={styles.gradeLabel}>{meta.label}</span>
                     <span className={styles.gradeScore}>{meta.score} из 4</span>
                   </button>
                 );
@@ -372,8 +470,8 @@ export function ScheduleView({ session }: ScheduleViewProps) {
             {assessmentMessage ? <div className="state-message">{assessmentMessage}</div> : null}
             {assessmentError ? <div className="state-message error">{assessmentError}</div> : null}
 
-            <button type="button" className="button" onClick={saveAssessment} disabled={assessmentSaving}>
-              <Save size={16} /> {assessmentSaving ? 'Сохраняю...' : 'Сохранить оценку'}
+            <button type="button" className="button" onClick={() => { void saveAssessmentComment(); }} disabled={assessmentSaving}>
+              <Save size={16} /> {assessmentSaving ? 'Сохраняю...' : 'Сохранить комментарий'}
             </button>
           </>
         ) : (
@@ -401,7 +499,7 @@ export function ScheduleView({ session }: ScheduleViewProps) {
     <div className={styles.page}>
       <header className={`surface-panel ${styles.hero}`}>
         <div className={styles.heroTop}>
-          <div className="max-w-2xl">
+          <div className={styles.heroTitleBlock}>
             <p className="eyebrow">Календарь дежурств</p>
           </div>
 
@@ -430,7 +528,7 @@ export function ScheduleView({ session }: ScheduleViewProps) {
           </div>
         </div>
 
-        {data && (
+        {data && !isRegularUser && (
           <div className={styles.metrics}>
             <div className={`surface-panel-soft ${styles.metricCard}`}>
               <div className={styles.metricLabel}><CalendarDays size={14} /> Этаж</div>
@@ -467,19 +565,43 @@ export function ScheduleView({ session }: ScheduleViewProps) {
       )}
 
       {data && (
-        <div className={styles.layout}>
+        <div className={[styles.layout, isRegularUser ? styles.userLayout : ''].join(' ').trim()}>
           <section className={`surface-panel ${styles.calendarSection}`}>
             <div className={styles.sectionHeader}>
               <div>
                 <h3 className={styles.sectionTitle}>Календарь месяца</h3>
-                <p className={styles.sectionCopy}>Клик по дате открывает контекстное меню дня. Для staff там же доступны оценка и комментарий.</p>
+                <p className={styles.sectionCopy}>
+                  {data.can_assess
+                    ? 'Клик по дате открывает контекстное меню дня. Для staff там же доступны оценка и комментарий.'
+                    : 'Клик по дате с дежурством показывает детали смены вашего этажа.'}
+                </p>
               </div>
               <div className="badge">
-                {queueDraft.length} блоков в очереди
+                {data.can_edit ? `${queueDraft.length} блоков в очереди` : `Этаж ${data.floor}`}
               </div>
             </div>
 
             <div className={styles.desktopCalendar}>
+              <div className={styles.desktopCalendarIntro}>
+                <div>
+                  <div className={styles.metricLabel}><CalendarDays size={14} /> Карта месяца</div>
+                  <div className={styles.desktopMonthTitle}>{formatMonthTitle(year, month)}</div>
+                </div>
+
+                <div className={styles.desktopFocusCard}>
+                  <div>
+                    <div className={styles.selectedLabel}>{selectedDay ? 'Выбранное дежурство' : 'Ближайшее дежурство'}</div>
+                    <div className={styles.desktopFocusTitle}>
+                      {mobileAgendaDay ? `Блок ${mobileAgendaDay.room}` : 'Нет смен'}
+                    </div>
+                    <div className={styles.metricNote}>
+                      {mobileAgendaDay ? formatMobileDayLabel(mobileAgendaDay.date) : 'Для этого месяца дежурства пока не назначены.'}
+                    </div>
+                  </div>
+                  {userBlock ? <span className="badge">Мой блок: {userBlock}</span> : null}
+                </div>
+              </div>
+
               <div className={styles.weekHeader}>
                 {weekdayLabels.map((label) => (
                   <div key={label} className={styles.weekday}>{label}</div>
@@ -493,10 +615,12 @@ export function ScheduleView({ session }: ScheduleViewProps) {
 
                 {data.days.map((day) => {
                   const isSelected = selectedDay?.date === day.date;
+                  const isUserDuty = Boolean(userBlock && day.room === userBlock);
                   const assessmentMeta = day.assessment ? getDutyGradeMeta(day.assessment.grade) : null;
                   const className = [
                     styles.dayCard,
                     day.room ? styles.dayButton : '',
+                    isUserDuty ? styles.dayUserDuty : '',
                     day.is_today ? styles.dayToday : '',
                     isSelected ? styles.daySelected : '',
                   ].filter(Boolean).join(' ');
@@ -513,8 +637,9 @@ export function ScheduleView({ session }: ScheduleViewProps) {
                           <>
                             <span className={styles.roomLabel}>Дежурит</span>
                             <div className={styles.roomValue}>Блок {day.room}</div>
+                            {isUserDuty ? <span className={styles.myDutyPill}>Мой блок</span> : null}
                             {assessmentMeta ? (
-                              <span className={styles.assessmentPill} style={{ color: assessmentMeta.color, borderColor: assessmentMeta.border, background: assessmentMeta.surface }}>
+                              <span className={[styles.assessmentPill, getGradeToneClassName(day.assessment!.grade)].join(' ')}>
                                 {assessmentMeta.shortLabel}
                               </span>
                             ) : null}
@@ -547,41 +672,86 @@ export function ScheduleView({ session }: ScheduleViewProps) {
             </div>
 
             <div className={styles.mobileList}>
-              {data.days.map((day) => {
-                const isSelected = selectedDay?.date === day.date;
-                const assessmentMeta = day.assessment ? getDutyGradeMeta(day.assessment.grade) : null;
-
-                return (
-                  <div key={day.date} className={[styles.mobileSlot, isSelected ? styles.mobileSlotActive : ''].join(' ').trim()}>
-                    <button
-                      type="button"
-                      className={styles.mobileCard}
-                      onClick={() => day.room && toggleDayMenu(day)}
-                      aria-expanded={isSelected ? true : undefined}
-                      disabled={!day.room}
-                    >
-                      <div className={styles.dayHeader}>
-                        <div>
-                          <div className={styles.roomValue} style={{ fontSize: '1rem' }}>{formatMobileDayLabel(day.date)}</div>
-                          <div className={styles.metricNote}>{day.room ? `Блок ${day.room}` : 'Очередь ещё не заполнена'}</div>
-                        </div>
-                        {day.queue_position ? <span className={styles.queueBadge}>#{day.queue_position}</span> : null}
-                      </div>
-                      {assessmentMeta ? (
-                        <span className={styles.assessmentPill} style={{ color: assessmentMeta.color, borderColor: assessmentMeta.border, background: assessmentMeta.surface }}>
-                          {assessmentMeta.label}
-                        </span>
-                      ) : null}
-                    </button>
-                    {isSelected ? renderDayMenu(day, true) : null}
+              <div className={styles.mobileCalendarCard}>
+                <div className={styles.mobileCalendarTop}>
+                  <div>
+                    <div className={styles.metricLabel}><CalendarDays size={14} /> Месяц</div>
+                    <div className={styles.mobileMonthTitle}>{formatMonthTitle(year, month)}</div>
                   </div>
-                );
-              })}
+                  <div className={styles.mobileMonthActions}>
+                    <button type="button" onClick={() => changeMonth(-1)} className={styles.circleButton} aria-label="Предыдущий месяц">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button type="button" onClick={() => changeMonth(1)} className={styles.circleButton} aria-label="Следующий месяц">
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.mobileWeekHeader}>
+                  {weekdayLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+
+                <div className={styles.mobileMonthGrid}>
+                  {Array.from({ length: leadingEmptyCells }).map((_, index) => (
+                    <span key={`mobile-empty-${index}`} className={styles.mobileEmptyDay} />
+                  ))}
+
+                  {data.days.map((day) => {
+                    const isSelected = selectedDay?.date === day.date;
+                    const isUserDuty = Boolean(userBlock && day.room === userBlock);
+                    const assessmentMeta = day.assessment ? getDutyGradeMeta(day.assessment.grade) : null;
+                    return (
+                      <button
+                        key={day.date}
+                        type="button"
+                        className={[
+                          styles.mobileDayButton,
+                          day.room ? styles.mobileDayHasDuty : '',
+                          isUserDuty ? styles.mobileDayUserDuty : '',
+                          day.is_today ? styles.mobileDayToday : '',
+                          isSelected ? styles.mobileDaySelected : '',
+                          assessmentMeta && day.assessment ? getGradeToneClassName(day.assessment.grade) : '',
+                        ].filter(Boolean).join(' ')}
+                        onClick={() => day.room && toggleDayMenu(day)}
+                        disabled={!day.room}
+                        aria-label={day.room ? `${formatMobileDayLabel(day.date)}, блок ${day.room}` : formatMobileDayLabel(day.date)}
+                      >
+                        <span>{day.day}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className={styles.mobileAgendaPanel}>
+                  <div className={styles.mobileAgendaHandle} />
+                  {mobileAgendaDay ? (
+                    <div className={styles.mobileAgendaContent}>
+                      <div>
+                        <div className={styles.selectedLabel}>{selectedDay ? 'Выбранное дежурство' : 'Ближайшее дежурство'}</div>
+                        <h3 className={styles.selectedTitle}>Блок {mobileAgendaDay.room}</h3>
+                        <p className={styles.selectedMeta}>{formatMobileDayLabel(mobileAgendaDay.date)}</p>
+                      </div>
+                      <div className={styles.mobileAgendaBadges}>
+                        {userBlock && mobileAgendaDay.room === userBlock ? <span className="badge">Мой блок</span> : null}
+                        {mobileAgendaDay.is_today ? <span className="badge">Сегодня</span> : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.metricNote}>В этом месяце пока нет назначенных дежурств.</div>
+                  )}
+                </div>
+              </div>
+
+              {selectedDay ? renderDayMenu(selectedDay, true) : null}
             </div>
           </section>
 
           <aside className={styles.sidebar}>
-            <section className={`surface-panel ${styles.sidebarSection}`}>
+            {data.can_edit && (
+            <section className={`surface-panel ${styles.sidebarSection} ${styles.queueSection}`}>
               <div className={styles.sectionHeader}>
                 <div>
                   <h3 className={styles.sectionTitle}>Очередь блоков</h3>
@@ -674,14 +844,17 @@ export function ScheduleView({ session }: ScheduleViewProps) {
                 </>
               )}
             </section>
+            )}
 
-            <section className={`surface-panel ${styles.sidebarSection}`}>
+            <section className={`surface-panel ${styles.sidebarSection} ${styles.upcomingSection}`}>
               <div className={styles.sectionHeader}>
                 <div>
                   <h3 className={styles.sectionTitle}>Ближайшие дежурства</h3>
                   <p className={styles.sectionCopy}>Короткий список ближайших смен, чтобы не искать их по всему месяцу.</p>
                 </div>
               </div>
+
+              {renderPersonalRating()}
 
               <div className={styles.upcomingList}>
                 {upcomingDays.map((day) => (

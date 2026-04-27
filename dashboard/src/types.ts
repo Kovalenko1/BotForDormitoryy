@@ -75,7 +75,7 @@ export interface OutgoingMessageLog {
   created_at: string;
 }
 
-export type ViewType = 'dashboard' | 'general' | 'users' | 'errors' | 'schedule' | 'statistics' | 'management';
+export type ViewType = 'dashboard' | 'general' | 'users' | 'schedule' | 'statistics' | 'management' | 'profile';
 
 export type DutyAssessmentGrade = 'excellent' | 'good' | 'satisfactory' | 'unsatisfactory';
 
@@ -85,6 +85,12 @@ export interface DutyAssessment {
   created_by_chat_id: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
 }
 
 export interface DashboardSessionUser {
@@ -114,6 +120,7 @@ export interface DashboardPermissions {
   can_manage_user_access: boolean;
   can_manage_notifications: boolean;
   can_broadcast: boolean;
+  can_view_profile: boolean;
 }
 
 export interface DashboardSessionResponse {
@@ -122,6 +129,12 @@ export interface DashboardSessionResponse {
   allowed_views: ViewType[];
   permissions: DashboardPermissions;
   accessible_floors: number[];
+}
+
+export interface DashboardProfileResponse {
+  session: DashboardSessionResponse;
+  personal_rating: DutyRatingItem | null;
+  floor_rating: DutyRatingItem[];
 }
 
 export interface GeneralLogItem {
@@ -209,6 +222,22 @@ export interface DutyCalendarDay {
   assessment: DutyAssessment | null;
 }
 
+export interface DutyRatingItem {
+  room: string;
+  assessment_count: number;
+  average_score: number;
+  average_percent: number;
+  grade_counts: Record<DutyAssessmentGrade, number>;
+  latest_assessment_at: string | null;
+  xp: number;
+  level: number;
+  level_title: string;
+  next_level_xp: number;
+  level_progress: number;
+  rank: number;
+  achievements: Achievement[];
+}
+
 export interface DutyCalendarResponse {
   floor: number;
   year: number;
@@ -221,6 +250,7 @@ export interface DutyCalendarResponse {
   queue: DutyQueue[];
   notification_setting: NotificationSettingItem;
   days: DutyCalendarDay[];
+  personal_rating: DutyRatingItem | null;
 }
 
 export interface DutyAssessmentResponse {
@@ -237,6 +267,13 @@ export interface DutyStatsItem {
   average_percent: number;
   grade_counts: Record<DutyAssessmentGrade, number>;
   latest_assessment_at: string | null;
+  xp: number;
+  level: number;
+  level_title: string;
+  next_level_xp: number;
+  level_progress: number;
+  rank: number;
+  achievements: Achievement[];
 }
 
 export interface DutyStatsResponse {

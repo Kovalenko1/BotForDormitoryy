@@ -1,21 +1,26 @@
-import React from 'react';
+import { memo, useMemo } from 'react';
 import {
-  Activity,
-  AlertOctagon,
   BarChart3,
   CalendarDays,
+  FileText,
+  History,
   LayoutDashboard,
-  MessageSquare,
+  Orbit,
+  PawPrint,
   Settings2,
-  Users,
+  UserRound,
+  type LucideIcon,
 } from 'lucide-react';
+import type { ThemeName } from '../App';
 import type { DashboardSessionResponse, ViewType } from '../types';
 import styles from './Sidebar.module.scss';
 
 interface SidebarProps {
   currentView: ViewType;
   onChangeView: (view: ViewType) => void;
+  onToggleTheme: () => void;
   session: DashboardSessionResponse;
+  theme: ThemeName;
 }
 
 const roleLabels: Record<string, string> = {
@@ -27,29 +32,35 @@ const roleLabels: Record<string, string> = {
 
 const navConfig = [
   { id: 'dashboard', label: 'Обзор', hint: 'Главные показатели', icon: LayoutDashboard },
-  { id: 'general', label: 'Журнал', hint: 'События и сообщения', icon: Activity },
-  { id: 'users', label: 'История', hint: 'Карточки жильцов', icon: Users },
-  { id: 'errors', label: 'Сбои', hint: 'Ошибки и уведомления', icon: AlertOctagon },
+  { id: 'general', label: 'Журнал', hint: 'События и ошибки', icon: FileText },
+  { id: 'users', label: 'История', hint: 'Карточки жильцов', icon: History },
   { id: 'schedule', label: 'Календарь', hint: 'Очередь и оценки', icon: CalendarDays },
   { id: 'statistics', label: 'Статистика', hint: 'Гистограмма по блокам', icon: BarChart3 },
   { id: 'management', label: 'Управление', hint: 'Роли, доступ, рассылки', icon: Settings2 },
-] as const satisfies ReadonlyArray<{ id: ViewType; label: string; hint: string; icon: typeof LayoutDashboard }>;
+  { id: 'profile', label: 'Профиль', hint: 'Комната и рейтинг', icon: UserRound },
+] as const satisfies ReadonlyArray<{ id: ViewType; label: string; hint: string; icon: LucideIcon }>;
 
-export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
-  const navItems = navConfig.filter((item) => session.allowed_views.includes(item.id));
-  const scopeLabel = session.scope === 'floor'
-    ? `Этаж ${session.user.floor ?? 'не указан'}`
-    : 'Все этажи';
+function getNavClassName(view: ViewType, isActive: boolean) {
+  const names = [styles.navButton];
+  if (view === 'schedule') names.push(styles.navButtonSchedule);
+  if (view === 'statistics') names.push(styles.navButtonStatistics);
+  if (view === 'management') names.push(styles.navButtonManagement);
+  if (isActive) names.push(styles.navButtonActive);
+  return names.join(' ');
+}
+
+export const Sidebar = memo(function Sidebar({ currentView, onChangeView, onToggleTheme, session, theme }: SidebarProps) {
+  const allowedViews = session.allowed_views;
+  const navItems = useMemo(
+    () => navConfig.filter((item) => allowedViews.includes(item.id)),
+    [allowedViews],
+  );
+  const scopeLabel = useMemo(
+    () => (session.scope === 'floor' ? `Этаж ${session.user.floor ?? 'не указан'}` : 'Все этажи'),
+    [session.scope, session.user.floor],
+  );
   const roleLabel = roleLabels[session.user.role] ?? session.user.role;
-
-  const getNavClassName = (view: ViewType, isActive: boolean) => {
-    const names = [styles.navButton];
-    if (view === 'schedule') names.push(styles.navButtonSchedule);
-    if (view === 'statistics') names.push(styles.navButtonStatistics);
-    if (view === 'management') names.push(styles.navButtonManagement);
-    if (isActive) names.push(styles.navButtonActive);
-    return names.join(' ');
-  };
+  const ThemeIcon = theme === 'panda' ? PawPrint : Orbit;
 
   return (
     <>
@@ -58,8 +69,8 @@ export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
         <div className={styles.desktopInner}>
           <div className={`surface-panel ${styles.brand}`}>
             <div className={styles.brandRow}>
-              <div className={styles.brandBadge}>
-                <MessageSquare size={18} strokeWidth={2.7} />
+              <div className={`${styles.brandBadge} ${theme === 'panda' ? styles.brandBadgePanda : styles.brandBadgeDark}`}>
+                <ThemeIcon size={18} strokeWidth={2.7} />
               </div>
               <h1 className={styles.brandTitle}>Dormitory Control</h1>
             </div>
@@ -97,11 +108,19 @@ export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
               </div>
             </div>
             <div className="badge">Доступ: {session.scope === 'all' ? 'все этажи' : 'только свой этаж'}</div>
+            <button type="button" className={styles.themeButton} onClick={onToggleTheme}>
+              <ThemeIcon className={styles.themeGlyph} size={16} />
+              {theme === 'panda' ? 'Тема: Панда' : 'Тема: тёмная'}
+            </button>
           </div>
         </div>
       </aside>
 
       {/* ── Mobile: fixed bottom navigation ───────────────── */}
+      <button type="button" className={styles.themeFab} onClick={onToggleTheme} aria-label="Сменить тему">
+        <ThemeIcon className={styles.themeGlyph} size={18} />
+      </button>
+
       <nav className={styles.bottomNav} aria-label="Навигация">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -122,5 +141,5 @@ export function Sidebar({ currentView, onChangeView, session }: SidebarProps) {
       </nav>
     </>
   );
-}
+});
 

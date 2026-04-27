@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarRange } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Award, BarChart3, CalendarRange, Trophy } from 'lucide-react';
 import { ApiError, dashboardApi } from '../api';
 import { DUTY_GRADE_ORDER, getDutyGradeMeta } from '../lib/duty';
 import type { DashboardSessionResponse, DutyStatsResponse } from '../types';
@@ -23,6 +23,10 @@ function toInputDate(value: Date) {
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getGradeToneClassName(grade: string) {
+  return styles[`grade${grade[0].toUpperCase()}${grade.slice(1)}`];
 }
 
 export function StatisticsView({ session }: StatisticsViewProps) {
@@ -153,10 +157,11 @@ export function StatisticsView({ session }: StatisticsViewProps) {
               <div className={styles.summaryValue}>{data.summary.average_score.toFixed(1)}</div>
             </div>
             {DUTY_GRADE_ORDER.map((grade) => {
-              const meta = getDutyGradeMeta(grade);
               return (
                 <div key={grade} className={`surface-panel-soft ${styles.summaryCard}`}>
-                  <div className={styles.summaryLabel} style={{ color: meta.color }}>{meta.shortLabel}</div>
+                  <div className={[styles.summaryLabel, getGradeToneClassName(grade)].join(' ')}>
+                    {getDutyGradeMeta(grade).shortLabel}
+                  </div>
                   <div className={styles.summaryValue}>{data.summary.grade_counts[grade] ?? 0}</div>
                 </div>
               );
@@ -193,11 +198,38 @@ export function StatisticsView({ session }: StatisticsViewProps) {
                 {DUTY_GRADE_ORDER.map((grade) => {
                   const meta = getDutyGradeMeta(grade);
                   return (
-                    <span key={grade} className={styles.legendItem} style={{ borderColor: meta.border, background: meta.surface, color: meta.color }}>
+                    <span key={grade} className={[styles.legendItem, getGradeToneClassName(grade)].join(' ')}>
                       {meta.label}
                     </span>
                   );
                 })}
+              </div>
+
+              <div className={styles.ratingGrid}>
+                {columns.slice(0, 6).map((item) => (
+                  <article key={item.room} className={styles.ratingCard}>
+                    <div className={styles.ratingHeader}>
+                      <div>
+                        <div className={styles.summaryLabel}><Trophy size={13} /> #{item.rank}</div>
+                        <div className={styles.ratingTitle}>Блок {item.room}</div>
+                      </div>
+                      <div className={styles.levelBadge}>Lv {item.level}</div>
+                    </div>
+                    <div className={styles.ratingMeta}>
+                      {item.level_title} · {item.xp} XP · ср. {item.average_score.toFixed(1)}
+                    </div>
+                    <div className={styles.levelBar}>
+                      <span style={{ width: `${item.level_progress}%` }} />
+                    </div>
+                    <div className={styles.achievementRow}>
+                      {item.achievements.slice(0, 3).map((achievement) => (
+                        <span key={achievement.id} className={styles.achievementPill} title={achievement.description}>
+                          <Award size={12} /> {achievement.title}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
               </div>
 
               <div className={styles.histogramWrap}>
@@ -217,12 +249,13 @@ export function StatisticsView({ session }: StatisticsViewProps) {
                         <div className={styles.colBarArea}>
                           {total > 0 ? (
                             <div className={styles.colBar} style={{ height: `${pct}%` }}>
-                              {item.segments.map((seg) => (
-                                <div
-                                  key={seg.grade}
-                                  className={styles.colSegment}
-                                  style={{ flex: seg.count, background: seg.meta.solid }}
-                                />
+                              {item.segments.flatMap((seg) => (
+                                Array.from({ length: seg.count }).map((_, segmentIndex) => (
+                                  <div
+                                    key={`${seg.grade}-${segmentIndex}`}
+                                    className={[styles.colSegment, getGradeToneClassName(seg.grade)].join(' ')}
+                                  />
+                                ))
                               ))}
                             </div>
                           ) : (

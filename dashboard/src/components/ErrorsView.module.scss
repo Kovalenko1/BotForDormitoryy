@@ -1,0 +1,215 @@
+.page {
+  width: min(100%, 1024px);
+  margin: 0 auto;
+  display: grid;
+  gap: 24px;
+  padding: 4px 0 8px;
+  animation: pageIn 280ms var(--ease-out) both;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent-red);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-style: italic;
+  line-height: 1.05;
+}
+
+.counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 141, 130, 0.24);
+  border-radius: 999px;
+  background: var(--error-bg);
+  color: var(--accent-red);
+  padding: 7px 12px;
+}
+
+.counter span {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.errorMessage {
+  border: 1px solid rgba(255, 141, 130, 0.3);
+  border-radius: var(--radius-xl);
+  background: var(--error-bg);
+  color: var(--danger-text);
+  padding: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 141, 130, 0.24);
+  border-radius: var(--radius-xl);
+  background: var(--surface-inset);
+  box-shadow: var(--shadow-card);
+  transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out);
+}
+
+.card:hover {
+  border-color: rgba(255, 141, 130, 0.42);
+  background: var(--surface-highlight);
+}
+
+.cardAccent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent-red);
+  opacity: 0.68;
+}
+
+.cardBody {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+}
+
+.iconCell {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--accent-red);
+  opacity: 0.84;
+}
+
+.content {
+  min-width: 0;
+  flex: 1;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.contextRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px -16px -16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-inset-strong);
+  padding: 12px 16px;
+}
+
+.contextRow p {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.contextRow span {
+  flex-shrink: 0;
+  color: var(--accent-red);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.empty {
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-xl);
+  color: var(--text-dim);
+  padding: 80px 18px;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: var(--success-bg);
+  color: var(--accent-green);
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--accent-green);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.emptyCopy {
+  margin: 8px 0 0;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .header,
+  .cardHeader,
+  .contextRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cardBody {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .contextRow {
+    margin: 12px -14px -14px;
+    padding: 12px 14px;
+  }
+}

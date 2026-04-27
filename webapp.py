@@ -34,6 +34,20 @@ DUTY_GRADE_SCORES = {
     DutyAssessmentGrade.SATISFACTORY: 2,
     DutyAssessmentGrade.UNSATISFACTORY: 1,
 }
+DUTY_GRADE_XP = {
+    DutyAssessmentGrade.EXCELLENT: 120,
+    DutyAssessmentGrade.GOOD: 80,
+    DutyAssessmentGrade.SATISFACTORY: 35,
+    DutyAssessmentGrade.UNSATISFACTORY: 5,
+}
+LEVEL_SIZE_XP = 240
+LEVEL_TITLES = (
+    'Новички чистоты',
+    'Надёжный блок',
+    'Сильная смена',
+    'Эталон этажа',
+    'Легенды порядка',
+)
 
 WEBAPP_BOT = telebot.TeleBot(BOT_TOKEN) if BOT_TOKEN else None
 if WEBAPP_BOT is not None:
@@ -87,6 +101,10 @@ class UpdateUserAccessPayload(BaseModel):
     is_whitelisted: bool | None = None
 
 
+class UpdateProfileRoomPayload(BaseModel):
+    room: str
+
+
 @dataclass(frozen=True)
 class DashboardAccess:
     chat_id: str
@@ -118,8 +136,10 @@ class DashboardAccess:
     @property
     def allowed_views(self) -> list[str]:
         if self.role == RoleEnum.USER.value:
-            return ['schedule'] if self.is_whitelisted else []
-        return ['dashboard', 'general', 'users', 'errors', 'schedule', 'statistics', 'management']
+            if not self.is_whitelisted:
+                return []
+            return ['profile', 'schedule'] if not self.room else ['schedule', 'profile']
+        return ['dashboard', 'general', 'users', 'schedule', 'statistics', 'management', 'profile']
 
     @property
     def scope_value(self) -> Literal['all', 'floor']:
@@ -140,6 +160,7 @@ class DashboardAccess:
             'can_manage_user_access': self.role in MANAGE_ROLE_ROLES,
             'can_manage_notifications': self.role in STAFF_ROLES,
             'can_broadcast': self.role in STAFF_ROLES,
+            'can_view_profile': True,
         }
 
 
@@ -213,6 +234,42 @@ def _require_access(request: Request, allowed_roles: set[str] | None = None) -> 
             is_blocked=user.is_blocked,
             is_whitelisted=user.is_whitelisted,
         )
+
+
+def _access_from_user(user: User) -> DashboardAccess:
+    return DashboardAccess(
+        chat_id=user.chat_id,
+        role=user.role.value,
+        floor=user.floor,
+        room=user.room,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_blocked=user.is_blocked,
+        is_whitelisted=user.is_whitelisted,
+    )
+
+
+def _session_payload(access: DashboardAccess) -> dict:
+    return {
+        'user': {
+            'chat_id': access.chat_id,
+            'role': access.role,
+            'floor': access.floor,
+            'room': access.room,
+            'username': access.username,
+            'first_name': access.first_name,
+            'last_name': access.last_name,
+            'is_blocked': access.is_blocked,
+            'is_whitelisted': access.is_whitelisted,
+            'access_list': 'white' if access.is_whitelisted else 'black',
+            'display_name': _display_name(access.username, access.first_name, access.last_name, access.chat_id),
+        },
+        'scope': access.scope_value,
+        'allowed_views': access.allowed_views,
+        'permissions': access.permissions,
+        'accessible_floors': access.accessible_floors,
+    }
 
 
 def _apply_user_scope(query, access: DashboardAccess):
@@ -373,6 +430,19 @@ def _activity_item_from_event(item: BotLog) -> dict:
     }
 
 
+def _activity_item_from_failed_notification(item: FailedNotification) -> dict:
+    return {
+        'id': f'failed-notification-{item.id}',
+        'type': 'event',
+        'timestamp': _serialize_datetime(item.timestamp),
+        'title': 'Ошибка доставки',
+        'subtitle': f'Chat ID: {item.chat_id}',
+        'text': item.reason,
+        'status': FAILED_MESSAGE_STATUS,
+        'error_message': item.reason,
+    }
+
+
 def _error_item_from_failed_notification(item: FailedNotification) -> dict:
     return {
         'id': f'failed-notification-{item.id}',
@@ -413,6 +483,209 @@ def _assessment_payload(item: DutyAssessment | None) -> dict | None:
         'created_by_chat_id': item.created_by_chat_id,
         'created_at': _serialize_datetime(item.created_at),
         'updated_at': _serialize_datetime(item.updated_at),
+    }
+
+
+def _empty_grade_counts() -> dict[str, int]:
+    return {
+        'excellent': 0,
+        'good': 0,
+        'satisfactory': 0,
+        'unsatisfactory': 0,
+    }
+
+
+def _resolve_block_from_room(room: str | None) -> str | None:
+    if not room:
+        return None
+
+    try:
+        _, block, _ = parse_room(room)
+        return block
+    except ValueError:
+        try:
+            block, _ = parse_block(room)
+            return block
+        except ValueError:
+            return None
+
+
+def _longest_grade_streak(assessments: list[DutyAssessment], grade: DutyAssessmentGrade) -> int:
+    longest = 0
+    current = 0
+    for assessment in sorted(assessments, key=lambda item: item.duty_date):
+        if assessment.grade == grade:
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    return longest
+
+
+def _achievement_payload(identifier: str, title: str, description: str) -> dict:
+    return {
+        'id': identifier,
+        'title': title,
+        'description': description,
+    }
+
+
+def _build_achievements(item: dict, assessments: list[DutyAssessment]) -> list[dict]:
+    if item['assessment_count'] <= 0:
+        return []
+
+    achievements = [
+        _achievement_payload(
+            'first_duty',
+            'Первое дежурство',
+            'Блок получил первую оценку за дежурство.',
+        )
+    ]
+
+    if item['grade_counts']['excellent'] > 0:
+        achievements.append(_achievement_payload(
+            'excellent_shift',
+            'Чистый зачёт',
+            'Есть хотя бы одно дежурство на отлично.',
+        ))
+
+    if _longest_grade_streak(assessments, DutyAssessmentGrade.EXCELLENT) >= 3:
+        achievements.append(_achievement_payload(
+            'excellent_streak',
+            'Серия отличников',
+            'Три отличных дежурства подряд.',
+        ))
+
+    if item['assessment_count'] >= 5 and item['average_score'] >= 3:
+        achievements.append(_achievement_payload(
+            'reliable_block',
+            'Надёжный блок',
+            'Пять и более оценок со средним баллом не ниже 3.',
+        ))
+
+    recent_threshold = date.today() - timedelta(days=30)
+    recent_assessments = [
+        assessment
+        for assessment in assessments
+        if assessment.duty_date >= recent_threshold
+    ]
+    if len(recent_assessments) >= 3 and all(
+        assessment.grade != DutyAssessmentGrade.UNSATISFACTORY
+        for assessment in recent_assessments
+    ):
+        achievements.append(_achievement_payload(
+            'clean_month',
+            'Месяц без провалов',
+            'За последние 30 дней нет неудовлетворительных оценок.',
+        ))
+
+    if item['rank'] <= 3:
+        achievements.append(_achievement_payload(
+            'top_floor',
+            'Топ этажа',
+            'Блок входит в тройку рейтинга своего этажа.',
+        ))
+
+    return achievements
+
+
+def _build_rating_items(assessments: list[DutyAssessment], rooms: list[str] | None = None) -> list[dict]:
+    grouped: dict[str, list[DutyAssessment]] = defaultdict(list)
+    ordered_rooms: list[str] = []
+
+    for room in rooms or []:
+        if room and room not in grouped:
+            grouped[room] = []
+            ordered_rooms.append(room)
+
+    for assessment in assessments:
+        if assessment.room not in grouped:
+            ordered_rooms.append(assessment.room)
+        grouped[assessment.room].append(assessment)
+
+    items = []
+    for room in ordered_rooms:
+        room_assessments = sorted(grouped[room], key=lambda item: item.duty_date)
+        grade_counts = _empty_grade_counts()
+        total_score = 0
+        total_xp = 0
+        latest_assessment_at = None
+
+        for assessment in room_assessments:
+            grade_counts[assessment.grade.value] += 1
+            total_score += DUTY_GRADE_SCORES[assessment.grade]
+            total_xp += DUTY_GRADE_XP[assessment.grade]
+            latest_assessment_at = assessment.duty_date.isoformat()
+
+        assessment_count = len(room_assessments)
+        average_score = total_score / assessment_count if assessment_count else 0
+        level = total_xp // LEVEL_SIZE_XP + 1
+        current_level_xp = total_xp % LEVEL_SIZE_XP
+
+        items.append({
+            'room': room,
+            'assessment_count': assessment_count,
+            'average_score': round(average_score, 2),
+            'average_percent': round((average_score / 4) * 100, 1) if assessment_count else 0,
+            'grade_counts': grade_counts,
+            'latest_assessment_at': latest_assessment_at,
+            'xp': total_xp,
+            'level': level,
+            'level_title': LEVEL_TITLES[min(level - 1, len(LEVEL_TITLES) - 1)],
+            'next_level_xp': LEVEL_SIZE_XP - current_level_xp if current_level_xp else LEVEL_SIZE_XP,
+            'level_progress': round((current_level_xp / LEVEL_SIZE_XP) * 100, 1),
+            'rank': 0,
+            'achievements': [],
+        })
+
+    items.sort(key=lambda item: (
+        -item['average_score'],
+        -item['xp'],
+        -item['assessment_count'],
+        item['room'],
+    ))
+
+    for rank, item in enumerate(items, start=1):
+        item['rank'] = rank
+        item['achievements'] = _build_achievements(item, grouped[item['room']])
+
+    return items
+
+
+def _find_personal_rating(access: DashboardAccess, assessments: list[DutyAssessment], rooms: list[str]) -> dict | None:
+    user_block = _resolve_block_from_room(access.room)
+    if not user_block:
+        return None
+
+    rating_items = _build_rating_items(assessments, rooms)
+    return next((item for item in rating_items if item['room'] == user_block), None)
+
+
+def _profile_payload(session, user: User) -> dict:
+    access = _access_from_user(user)
+    floor_rating: list[dict] = []
+    personal_rating = None
+
+    if user.floor is not None:
+        assessments = session.query(DutyAssessment).filter(
+            DutyAssessment.floor == user.floor,
+        ).order_by(DutyAssessment.duty_date.asc()).all()
+        queue_rooms = [
+            item.room
+            for item in session.query(DutyQueue).filter(
+                DutyQueue.floor == user.floor,
+            ).order_by(DutyQueue.position.asc()).all()
+        ]
+        user_block = _resolve_block_from_room(user.room)
+        if user_block and user_block not in queue_rooms:
+            queue_rooms.append(user_block)
+        floor_rating = _build_rating_items(assessments, queue_rooms)
+        personal_rating = next((item for item in floor_rating if item['room'] == user_block), None)
+
+    return {
+        'session': _session_payload(access),
+        'personal_rating': personal_rating,
+        'floor_rating': floor_rating,
     }
 
 
@@ -554,7 +827,8 @@ def _replace_schedule(session, floor: int, blocks: list[str]):
 
     # Reset cycle start so the first block in the new schedule is on duty today
     setting = _get_floor_setting(session, floor)
-    setting.last_notified_on = None
+    if setting is not None:
+        setting.last_notified_on = None
 
     session.commit()
 
@@ -640,25 +914,48 @@ def api_healthcheck():
 @app.get('/api/session')
 def get_session(request: Request):
     access = _require_access(request)
-    return {
-        'user': {
-            'chat_id': access.chat_id,
-            'role': access.role,
-            'floor': access.floor,
-            'room': access.room,
-            'username': access.username,
-            'first_name': access.first_name,
-            'last_name': access.last_name,
-            'is_blocked': access.is_blocked,
-            'is_whitelisted': access.is_whitelisted,
-            'access_list': 'white' if access.is_whitelisted else 'black',
-            'display_name': _display_name(access.username, access.first_name, access.last_name, access.chat_id),
-        },
-        'scope': access.scope_value,
-        'allowed_views': access.allowed_views,
-        'permissions': access.permissions,
-        'accessible_floors': access.accessible_floors,
-    }
+    return _session_payload(access)
+
+
+@app.get('/api/profile')
+def get_profile(request: Request):
+    access = _require_access(request)
+
+    with next(get_db_session()) as session:
+        user = session.query(User).filter(User.chat_id == access.chat_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail='Пользователь не найден.')
+        return _profile_payload(session, user)
+
+
+@app.put('/api/profile/room')
+def update_profile_room(payload: UpdateProfileRoomPayload, request: Request):
+    access = _require_access(request)
+
+    try:
+        normalized_room, _, floor = parse_room(payload.room)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    with next(get_db_session()) as session:
+        user = session.query(User).filter(User.chat_id == access.chat_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail='Пользователь не найден.')
+
+        user.room = normalized_room
+        user.floor = floor
+        user.wing = ''
+        session.commit()
+        session.refresh(user)
+
+        response = _profile_payload(session, user)
+
+    log_bot_event(
+        f"Dashboard updated room for {access.chat_id}: {normalized_room}",
+        user_id=access.chat_id,
+    )
+
+    return response
 
 
 @app.get('/api/dashboard/overview')
@@ -730,10 +1027,14 @@ def get_general_logs(request: Request, limit: int = 120):
         bot_logs = _apply_bot_log_scope(session.query(BotLog), access).order_by(
             BotLog.timestamp.desc()
         ).limit(safe_limit).all()
+        failed_notifications = _apply_failed_scope(session.query(FailedNotification), access).order_by(
+            FailedNotification.timestamp.desc()
+        ).limit(safe_limit).all()
 
     items = [_activity_item_from_incoming(item) for item in incoming_messages]
     items.extend(_activity_item_from_outgoing(item) for item in outgoing_messages)
     items.extend(_activity_item_from_event(item) for item in bot_logs)
+    items.extend(_activity_item_from_failed_notification(item) for item in failed_notifications)
     items.sort(key=lambda item: item['timestamp'], reverse=True)
 
     return {'items': items[:safe_limit]}
@@ -821,8 +1122,9 @@ def get_users(
 
 
 @app.get('/api/users/{chat_id}/footprint')
-def get_user_footprint(chat_id: str, request: Request):
+def get_user_footprint(chat_id: str, request: Request, limit: int = 500):
     access = _require_access(request, STAFF_ROLES)
+    safe_limit = max(50, min(limit, 1000))
 
     with next(get_db_session()) as session:
         target_user = _apply_user_scope(session.query(User), access).filter(User.chat_id == chat_id).first()
@@ -831,16 +1133,16 @@ def get_user_footprint(chat_id: str, request: Request):
 
         incoming_messages = session.query(IncomingUserMessage).filter(
             IncomingUserMessage.sender_chat_id == chat_id
-        ).order_by(IncomingUserMessage.received_at.asc()).all()
+        ).order_by(IncomingUserMessage.received_at.desc()).limit(safe_limit).all()
         outgoing_messages = session.query(OutgoingMessageLog).filter(
             or_(
                 OutgoingMessageLog.sender_chat_id == chat_id,
                 OutgoingMessageLog.recipient_chat_id == chat_id,
             )
-        ).order_by(OutgoingMessageLog.created_at.asc()).all()
+        ).order_by(OutgoingMessageLog.created_at.desc()).limit(safe_limit).all()
         failed_notifications = session.query(FailedNotification).filter(
             FailedNotification.chat_id == chat_id
-        ).order_by(FailedNotification.timestamp.asc()).all()
+        ).order_by(FailedNotification.timestamp.desc()).limit(safe_limit).all()
 
     items = [
         {
@@ -879,6 +1181,7 @@ def get_user_footprint(chat_id: str, request: Request):
         for item in failed_notifications
     )
     items.sort(key=lambda item: item['timestamp'])
+    items = items[-safe_limit:]
 
     return {
         'user': _user_payload(target_user),
@@ -917,6 +1220,18 @@ def get_duty_calendar(
             item.duty_date.isoformat(): item
             for item in assessments
         }
+        all_floor_assessments = session.query(DutyAssessment).filter(
+            DutyAssessment.floor == target_floor,
+        ).order_by(DutyAssessment.duty_date.asc()).all()
+        rating_rooms = [item.room for item in queue_items]
+        user_block = _resolve_block_from_room(access.room)
+        if user_block and user_block not in rating_rooms:
+            rating_rooms.append(user_block)
+        personal_rating = _find_personal_rating(
+            access,
+            all_floor_assessments,
+            rating_rooms,
+        )
 
     # Rotate queue so position 1 = today's duty block
     queue_list = list(queue_items)
@@ -938,6 +1253,7 @@ def get_duty_calendar(
         'queue': [_queue_payload(item) for item in rotated_queue],
         'notification_setting': _notification_setting_payload(setting, target_floor),
         'days': _build_calendar_days(queue_items, schedule_start_date, year_value, month_value, assessments_by_date),
+        'personal_rating': personal_rating,
     }
 
 
@@ -1047,47 +1363,14 @@ def get_duty_stats(
             DutyAssessment.duty_date <= end_value,
         ).order_by(DutyAssessment.duty_date.asc()).all()
 
-    grouped: dict[str, dict] = {}
     summary_counts = defaultdict(int)
     total_score = 0
 
     for assessment in assessments:
-        if assessment.room not in grouped:
-            grouped[assessment.room] = {
-                'room': assessment.room,
-                'assessment_count': 0,
-                'score_total': 0,
-                'grade_counts': {
-                    'excellent': 0,
-                    'good': 0,
-                    'satisfactory': 0,
-                    'unsatisfactory': 0,
-                },
-                'latest_assessment_at': None,
-            }
-
-        item = grouped[assessment.room]
-        item['assessment_count'] += 1
-        item['score_total'] += DUTY_GRADE_SCORES[assessment.grade]
-        item['grade_counts'][assessment.grade.value] += 1
-        item['latest_assessment_at'] = assessment.duty_date.isoformat()
-
         summary_counts[assessment.grade.value] += 1
         total_score += DUTY_GRADE_SCORES[assessment.grade]
 
-    items = []
-    for room, item in grouped.items():
-        average_score = item['score_total'] / item['assessment_count'] if item['assessment_count'] else 0
-        items.append({
-            'room': room,
-            'assessment_count': item['assessment_count'],
-            'average_score': round(average_score, 2),
-            'average_percent': round((average_score / 4) * 100, 1) if item['assessment_count'] else 0,
-            'grade_counts': item['grade_counts'],
-            'latest_assessment_at': item['latest_assessment_at'],
-        })
-
-    items.sort(key=lambda item: (-item['average_score'], -item['assessment_count'], item['room']))
+    items = _build_rating_items(assessments)
 
     return {
         'floor': target_floor,

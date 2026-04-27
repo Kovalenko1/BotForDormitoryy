@@ -16,13 +16,10 @@ body {
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 12% 12%, rgba(122, 255, 167, 0.18), transparent 26%),
-    radial-gradient(circle at 82% 10%, rgba(112, 196, 137, 0.14), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(44, 122, 69, 0.18), transparent 34%),
-    linear-gradient(180deg, #020503 0%, #030806 48%, #050b08 100%);
+  background: var(--body-background);
   color: var(--text-primary);
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  transition: background 260ms var(--ease-out), color 260ms var(--ease-out);
 }
 
 body::before,
@@ -35,8 +32,8 @@ body::after {
 
 body::before {
   background:
-    linear-gradient(rgba(109, 179, 128, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(109, 179, 128, 0.035) 1px, transparent 1px);
+    linear-gradient(var(--body-grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--body-grid-color) 1px, transparent 1px);
   background-size: 120px 120px;
   mask-image: radial-gradient(circle at center, black 44%, transparent 100%);
   opacity: 0.6;
@@ -44,8 +41,15 @@ body::before {
 
 body::after {
   background:
-    radial-gradient(circle at 18% 20%, rgba(139, 255, 175, 0.08), transparent 18%),
-    radial-gradient(circle at 85% 72%, rgba(95, 215, 132, 0.06), transparent 20%);
+    radial-gradient(circle at 18% 20%, var(--body-aura-one), transparent 18%),
+    radial-gradient(circle at 85% 72%, var(--body-aura-two), transparent 20%);
+  animation: floatAura 20s linear infinite alternate;
+}
+
+@keyframes floatAura {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-20px, 30px) scale(1.05); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 a {
@@ -66,7 +70,7 @@ textarea {
 }
 
 ::selection {
-  background: rgba(122, 255, 167, 0.28);
+  background: var(--selection-bg);
   color: var(--text-primary);
 }
 
@@ -76,12 +80,12 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(111, 166, 127, 0.22);
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(122, 255, 167, 0.32);
+  background: var(--scrollbar-thumb-hover);
 }
 
 ::-webkit-scrollbar-track {
@@ -91,10 +95,10 @@ textarea {
 .surface-panel {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-2xl);
-  background: linear-gradient(170deg, rgba(11, 20, 14, 0.95) 0%, rgba(6, 10, 8, 0.97) 100%);
+  background: linear-gradient(170deg, var(--surface-strong) 0%, var(--surface-base) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(162, 255, 188, 0.07),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 var(--panel-shadow-top),
+    inset 0 -1px 0 var(--panel-shadow-bottom),
     var(--shadow-card);
   backdrop-filter: blur(20px) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
@@ -103,10 +107,36 @@ textarea {
 .surface-panel-soft {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  background: linear-gradient(170deg, rgba(14, 24, 18, 0.9), rgba(10, 17, 13, 0.88));
-  box-shadow: inset 0 1px 0 rgba(162, 255, 188, 0.05), 0 4px 20px rgba(0, 0, 0, 0.28);
+  background: linear-gradient(170deg, var(--surface-highlight), var(--surface-soft));
+  box-shadow: inset 0 1px 0 var(--panel-shadow-top), 0 4px 20px var(--panel-soft-shadow);
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.surface-panel,
+.surface-panel-soft {
+  animation: panelEnter 360ms var(--ease-out) both;
+  transition:
+    background 240ms var(--ease-out),
+    border-color 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+
+.surface-panel:hover,
+.surface-panel-soft:hover {
+  border-color: var(--border-strong);
+}
+
+@keyframes panelEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .eyebrow {
@@ -139,6 +169,7 @@ textarea {
 .button-secondary,
 .button-ghost,
 .button-danger {
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -149,6 +180,10 @@ textarea {
   cursor: pointer;
   font-weight: 600;
   letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
   transition:
     transform var(--t-base) var(--ease-out),
     border-color var(--t-base) var(--ease-out),
@@ -175,18 +210,18 @@ textarea {
 }
 
 .button {
-  background: linear-gradient(135deg, #d8ffe4 0%, #78efaa 52%, #3db568 100%);
-  color: #031007;
-  box-shadow: 0 6px 24px rgba(62, 181, 100, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--button-primary-shadow);
 }
 
 .button:hover {
-  box-shadow: 0 10px 36px rgba(62, 181, 100, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: var(--button-primary-shadow-hover);
 }
 
 .button-secondary {
   border-color: var(--border-strong);
-  background: rgba(11, 19, 14, 0.9);
+  background: var(--button-secondary-bg);
   color: var(--text-primary);
   box-shadow: inset 0 1px 0 rgba(162, 255, 188, 0.06), 0 4px 16px rgba(0, 0, 0, 0.24);
 }
@@ -214,7 +249,7 @@ textarea {
   width: 100%;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(111, 166, 127, 0.16);
-  background: rgba(6, 11, 8, 0.92);
+  background: var(--field-bg);
   color: var(--text-primary);
   padding: 13px 16px;
   outline: none;
@@ -261,7 +296,7 @@ textarea {
   padding: 36px 20px;
   text-align: center;
   color: var(--text-dim);
-  background: rgba(8, 14, 10, 0.78);
+  background: var(--surface-inset);
 }
 
 .badge {
@@ -276,8 +311,54 @@ textarea {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, rgba(10, 18, 13, 0.92), rgba(6, 12, 9, 0.88));
+  background: var(--surface-inset);
   box-shadow: inset 0 1px 0 rgba(162, 255, 188, 0.04);
+}
+
+:root[data-theme='panda'] {
+  .surface-panel,
+  .surface-panel-soft {
+    box-shadow: var(--shadow-card);
+  }
+
+  .button-secondary,
+  .button-ghost,
+  .field,
+  .textarea,
+  .select,
+  .empty-placeholder,
+  .badge {
+    border-color: var(--border-subtle);
+  }
+
+  .button-danger {
+    background: rgba(217, 86, 73, 0.12);
+    color: #9d332a;
+  }
+
+  .button {
+    border-color: rgba(34, 134, 83, 0.24);
+  }
+
+  .state-message {
+    color: #23633f;
+  }
+
+  .state-message.error {
+    color: #9d332a;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 @media (max-width: 767px) {

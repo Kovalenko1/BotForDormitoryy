@@ -20,6 +20,51 @@
   --accent-gold: #d6ff81;
   --success-bg: rgba(30, 91, 54, 0.24);
   --error-bg: rgba(108, 35, 35, 0.24);
+  --surface-inset: rgba(8, 14, 10, 0.86);
+  --surface-inset-strong: rgba(5, 10, 8, 0.97);
+  --field-bg: rgba(6, 11, 8, 0.92);
+  --button-secondary-bg: rgba(11, 19, 14, 0.9);
+  --button-primary-bg: linear-gradient(135deg, #d8ffe4 0%, #78efaa 52%, #3db568 100%);
+  --button-primary-text: #031007;
+  --button-primary-shadow: 0 6px 24px rgba(62, 181, 100, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --button-primary-shadow-hover: 0 10px 36px rgba(62, 181, 100, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --success-text: #caf0dc;
+  --danger-text: #ffd1ca;
+  --achievement-bg: rgba(43, 31, 61, 0.36);
+  --achievement-border: rgba(199, 166, 255, 0.24);
+  --achievement-text: #dac9ff;
+  --message-in-bg: rgba(22, 22, 22, 0.96);
+  --message-in-border: rgba(31, 31, 31, 0.95);
+  --message-out-bg: rgba(31, 31, 31, 0.96);
+  --message-out-border: rgba(48, 48, 48, 0.95);
+  --hero-bg:
+    linear-gradient(155deg, rgba(7, 14, 10, 0.99), rgba(10, 18, 13, 0.96));
+  --hero-text: #eef8f0;
+  --hero-muted: rgba(238, 248, 240, 0.78);
+  --hero-soft: rgba(238, 248, 240, 0.86);
+  --sidebar-bg:
+    linear-gradient(180deg, rgba(4, 9, 6, 0.99) 0%, rgba(2, 5, 4, 1) 100%);
+  --bottom-nav-bg: rgba(3, 6, 4, 0.97);
+  --nav-hover-bg: rgba(12, 22, 16, 0.58);
+  --nav-active-bg: linear-gradient(135deg, rgba(13, 30, 19, 0.96), rgba(20, 44, 28, 0.92));
+  --calendar-shell-bg:
+    linear-gradient(180deg, rgba(12, 20, 15, 0.94), rgba(6, 11, 8, 0.96));
+  --calendar-cell-bg: rgba(8, 14, 10, 0.86);
+  --calendar-cell-muted-bg: rgba(8, 14, 10, 0.5);
+  --calendar-duty-bg:
+    linear-gradient(180deg, rgba(15, 27, 19, 0.96), rgba(8, 14, 10, 0.96));
+  --calendar-my-duty-bg:
+    linear-gradient(160deg, rgba(214, 255, 129, 0.16), rgba(16, 34, 22, 0.95));
+  --calendar-selected-bg: #f6f3ff;
+  --calendar-selected-text: #251447;
+  --theme-icon-bg: linear-gradient(145deg, #d0ffe0 0%, #5de499 55%, #2cb865 100%);
+  --theme-icon-color: #031007;
+  --body-background:
+    linear-gradient(135deg, rgba(122, 255, 167, 0.08) 0 1px, transparent 1px 34px),
+    linear-gradient(180deg, #020503 0%, #030806 48%, #050b08 100%);
+  --body-grid-color: rgba(109, 179, 128, 0.035);
+  --body-aura-one: rgba(139, 255, 175, 0.08);
+  --body-aura-two: rgba(95, 215, 132, 0.06);
 
   /* radii */
   --radius-sm: 10px;
@@ -32,6 +77,14 @@
   --shadow-soft: 0 32px 96px rgba(0, 0, 0, 0.56);
   --shadow-card: 0 8px 36px rgba(0, 0, 0, 0.44), 0 2px 8px rgba(0, 0, 0, 0.28);
   --shadow-glow: 0 0 28px rgba(122, 255, 167, 0.16), 0 8px 32px rgba(0, 0, 0, 0.38);
+  
+  /* component specific */
+  --selection-bg: rgba(122, 255, 167, 0.28);
+  --scrollbar-thumb: rgba(111, 166, 127, 0.22);
+  --scrollbar-thumb-hover: rgba(122, 255, 167, 0.32);
+  --panel-shadow-top: rgba(162, 255, 188, 0.07);
+  --panel-shadow-bottom: rgba(0, 0, 0, 0.22);
+  --panel-soft-shadow: rgba(0, 0, 0, 0.28);
 
   /* transitions */
   --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -40,6 +93,90 @@
   --t-base: 200ms;
 
   /* layout */
-  --bottom-nav-height: 62px;
+  --bottom-nav-height: 78px;
   --sidebar-width: 284px;
+}
+
+:root[data-theme='panda'] {
+  color-scheme: light;
+  --bg-app: #f7f9f6;
+  --bg-app-accent: #e9f3ed;
+  --surface-base: rgba(255, 255, 255, 0.94);
+  --surface-soft: rgba(246, 249, 247, 0.94);
+  --surface-strong: rgba(255, 255, 255, 0.98);
+  --surface-highlight: rgba(234, 243, 237, 0.96);
+  --surface-inset: rgba(255, 255, 255, 0.88);
+  --surface-inset-strong: rgba(255, 255, 255, 0.98);
+  --field-bg: rgba(255, 255, 255, 0.92);
+  --button-secondary-bg: rgba(255, 255, 255, 0.86);
+  --button-primary-bg: linear-gradient(135deg, #e4f8ec 0%, #b8edcd 52%, #8eddb2 100%);
+  --button-primary-text: #12301f;
+  --button-primary-shadow: 0 10px 24px rgba(34, 134, 83, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --button-primary-shadow-hover: 0 14px 34px rgba(34, 134, 83, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  --success-text: #23633f;
+  --danger-text: #9d332a;
+  --achievement-bg: rgba(93, 87, 168, 0.10);
+  --achievement-border: rgba(93, 87, 168, 0.22);
+  --achievement-text: #3e397f;
+  --message-in-bg: rgba(255, 255, 255, 0.94);
+  --message-in-border: rgba(31, 39, 35, 0.12);
+  --message-out-bg: rgba(232, 244, 237, 0.96);
+  --message-out-border: rgba(23, 105, 65, 0.18);
+  --border-subtle: rgba(31, 39, 35, 0.11);
+  --border-strong: rgba(23, 105, 65, 0.30);
+  --text-primary: #141817;
+  --text-secondary: #3f4a45;
+  --text-muted: #69776f;
+  --text-dim: #9aa59f;
+  --accent-blue: #176941;
+  --accent-green: #228653;
+  --accent-orange: #c78235;
+  --accent-red: #d3574f;
+  --accent-purple: #5d57a8;
+  --accent-gold: #7b8d26;
+  --success-bg: rgba(34, 134, 83, 0.13);
+  --error-bg: rgba(211, 87, 79, 0.12);
+  --hero-bg:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(232, 247, 239, 0.96));
+  --hero-text: #141817;
+  --hero-muted: #53665b;
+  --hero-soft: #3f4a45;
+  --sidebar-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(233, 243, 237, 0.98) 100%);
+  --bottom-nav-bg: rgba(255, 255, 255, 0.94);
+  --nav-hover-bg: rgba(34, 134, 83, 0.08);
+  --nav-active-bg: linear-gradient(135deg, rgba(213, 246, 226, 0.98), rgba(157, 225, 184, 0.92));
+  --calendar-shell-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 241, 0.96));
+  --calendar-cell-bg: rgba(255, 255, 255, 0.88);
+  --calendar-cell-muted-bg: rgba(233, 239, 235, 0.72);
+  --calendar-duty-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 241, 0.94));
+  --calendar-my-duty-bg:
+    linear-gradient(150deg, rgba(230, 249, 237, 0.98), rgba(186, 234, 205, 0.94));
+  --calendar-selected-bg: #176941;
+  --calendar-selected-text: #ffffff;
+  --theme-icon-bg:
+    radial-gradient(circle at 34% 34%, #ffffff 0 13%, transparent 14%),
+    radial-gradient(circle at 66% 34%, #ffffff 0 13%, transparent 14%),
+    linear-gradient(145deg, #111817 0%, #25372e 100%);
+  --theme-icon-color: #ffffff;
+  --body-background:
+    linear-gradient(90deg, rgba(20, 24, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(34, 134, 83, 0.065) 0 10%, transparent 42%),
+    linear-gradient(180deg, #fbfcfa 0%, #edf7f1 52%, #f8faf7 100%);
+  --body-grid-color: rgba(20, 24, 23, 0.038);
+  --body-aura-one: rgba(34, 134, 83, 0.07);
+  --body-aura-two: rgba(20, 24, 23, 0.045);
+  --shadow-soft: 0 28px 78px rgba(31, 39, 35, 0.14);
+  --shadow-card: 0 12px 34px rgba(31, 39, 35, 0.12), 0 2px 8px rgba(31, 39, 35, 0.06);
+  --shadow-glow: 0 0 28px rgba(34, 134, 83, 0.12), 0 8px 32px rgba(31, 39, 35, 0.12);
+  
+  /* component specific */
+  --selection-bg: rgba(34, 134, 83, 0.28);
+  --scrollbar-thumb: rgba(31, 105, 65, 0.15);
+  --scrollbar-thumb-hover: rgba(34, 134, 83, 0.25);
+  --panel-shadow-top: rgba(255, 255, 255, 0.6);
+  --panel-shadow-bottom: rgba(31, 39, 35, 0.08);
+  --panel-soft-shadow: rgba(31, 39, 35, 0.12);
 }

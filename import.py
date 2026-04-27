@@ -1,5 +1,3 @@
-import time
-
 import telebot
 from config import BOT_TOKEN
 
@@ -7,48 +5,66 @@ from database import get_db_session
 from models import User, RoleEnum
 from utils import parse_room
 
-TOKEN = '6837247499:AAEjFumOQbne5TyY_VDnznq4SPJ02tVdLY0'
-bot = telebot.TeleBot(TOKEN)
-
-def get_users_by_room():
-    dic = {}
-    with open('date.txt', 'r') as file:
-        lines = file.read().splitlines()
-        for line in lines:
-            usersKey = []
-            key, value = line.split(':')
-            usersKey.append(value)
-            if (key not in dic.keys()):
-                dic.update({key: usersKey})
-            else:
-                dic[key].append(value)
-        return dic
-
-users = dict(sorted(get_users_by_room().items()))
-
-dictt = {}
-for room in users.keys():
-    arr = []
-    for i in users[room]:
-        arr.append(bot.get_chat(i))
-    dictt[room] = arr
+bot = telebot.TeleBot(BOT_TOKEN) if BOT_TOKEN else None
 
 
-with next(get_db_session()) as session:
-    for room in dictt.keys():
-        for user in dictt[room]:
-            db_user = session.query(User).filter(User.chat_id == str(user.id)).first()
-            if not db_user:
-                print(user.username)
-                normalized_room, _, floor = parse_room(room)
-                db_user = User(
-                    chat_id=str(user.id),
+def get_users_by_room(path: str = 'date.txt') -> dict[str, list[str]]:
+    rooms: dict[str, list[str]] = {}
+
+    with open(path, 'r', encoding='utf-8') as file:
+        for raw_line in file:
+            line = raw_line.strip()
+            if not line or ':' not in line:
+                continue
+
+            room, chat_id = (part.strip() for part in line.split(':', 1))
+            if room and chat_id:
+                rooms.setdefault(room, []).append(chat_id)
+
+    return dict(sorted(rooms.items()))
+
+
+def import_users(path: str = 'date.txt') -> int:
+    if bot is None:
+        raise RuntimeError('BOT_TOKEN is required to import Telegram users.')
+
+    users_by_room = get_users_by_room(path)
+    chat_ids = {chat_id for ids in users_by_room.values() for chat_id in ids}
+
+    with next(get_db_session()) as session:
+        existing_chat_ids = {
+            row[0]
+            for row in session.query(User.chat_id).filter(User.chat_id.in_(list(chat_ids))).all()
+        } if chat_ids else set()
+
+        imported_count = 0
+        for room, room_chat_ids in users_by_room.items():
+            normalized_room, _, floor = parse_room(room)
+
+            for chat_id in room_chat_ids:
+                if chat_id in existing_chat_ids:
+                    continue
+
+                telegram_user = bot.get_chat(chat_id)
+                username = f'@{telegram_user.username}' if telegram_user.username else 'Нетъ'
+                session.add(User(
+                    chat_id=str(telegram_user.id),
                     role=RoleEnum.USER,
                     room=normalized_room,
-                    username=f"{"@" if user.username else ""}{user.username or "Нетъ"}",
-                    first_name=user.first_name,
-                    last_name=f"{user.last_name or ''}",
+                    username=username,
+                    first_name=telegram_user.first_name,
+                    last_name=telegram_user.last_name or '',
                     floor=floor,
-                    wing="")
-                session.add(db_user)
-                session.commit()
+                    wing='',
+                ))
+                existing_chat_ids.add(chat_id)
+                existing_chat_ids.add(str(telegram_user.id))
+                imported_count += 1
+
+        session.commit()
+        return imported_count
+
+
+if __name__ == '__main__':
+    count = import_users()
+    print(f'Imported users: {count}')

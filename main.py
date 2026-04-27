@@ -16,13 +16,20 @@ from keyboards import (
     BTN_BECOME_CHAIRMAN,
     BTN_BECOME_STAROSTA,
     BTN_BROADCAST,
+    BTN_CANCEL,
     BTN_CHAIRMANS,
+    BTN_DELIVERY_ERROR_SETTINGS,
+    BTN_DELIVERY_ERRORS_DISABLE,
+    BTN_DELIVERY_ERRORS_ENABLE,
+    BTN_DELIVERY_ERRORS_MUTE,
+    BTN_DELIVERY_ERRORS_UNMUTE,
     BTN_DELETE_CHAIRMAN,
     BTN_DELETE_ROOMS,
     BTN_DELETE_STAROSTA,
     BTN_EDIT_SCHEDULE,
     BTN_MESSAGE_LOGS,
     BTN_NOTIFICATION_TIME,
+    BTN_REFRESH_BOT,
     BTN_SET_ROOM,
     BTN_SHOW_USERS,
     BTN_STAROSTAS,
@@ -34,7 +41,16 @@ from handlers.admin_handlers import handle_add_chairman, handle_delete_chairman,
 from handlers.chairman_handlers import handle_delete_starosta_by_chairman, handle_add_starosta, handle_show_all_users, \
     handle_show_starostas
 from handlers.log_handlers import handle_view_message_logs
-from handlers.notification_handlers import handle_broadcast_message, handle_manage_notification_time
+from handlers.notification_handlers import (
+    handle_broadcast_message,
+    handle_delivery_error_settings,
+    handle_disable_delivery_errors,
+    handle_enable_delivery_errors,
+    handle_manage_notification_time,
+    handle_mute_delivery_error_user,
+    handle_unmute_delivery_error_user,
+    should_notify_starosta_about_delivery_error,
+)
 from handlers.starosta_handlers import handle_view_duty_schedule, handle_add_rooms, handle_delete_room, \
     handle_show_users
 from handlers.user_handlers import handle_set_room, handle_become_chairman, handle_become_starosta
@@ -130,7 +146,7 @@ def check_duty():
                         text=f"Сегодня дежурит ваш блок {block_today}. (в случае если вы не можете провести дежурство, пожалуйста, договоритесь с соседями по блоку или комнате о замене)",
                         category='duty',
                     )
-                except telebot.apihelper.ApiException as e:
+                except Exception as e:
                     reason = "Неизвестная ошибка"
                     if "blocked by the user" in str(e):
                         reason = "Пользователь заблокировал бота"
@@ -147,7 +163,8 @@ def check_duty():
 
                     notify_starosta(
                         bot, session, fl,
-                        f"Ошибка отправки уведомления пользователю {user.chat_id} (комната {user.room}).\nПричина: {reason}"
+                        f"Ошибка отправки уведомления пользователю {user.chat_id} (комната {user.room}).\nПричина: {reason}",
+                        target_chat_id=user.chat_id,
                     )
 
             # После обработки всех пользователей переносим комнату в конец очереди
@@ -180,7 +197,7 @@ def reorder_duty_queue(session, floor):
     session.commit()
 
 
-def notify_starosta(bot, session, floor, message_text):
+def notify_starosta(bot, session, floor, message_text, target_chat_id: str | None = None):
     """
     Ищет старосту нужного этажа и шлёт ему уведомление.
     Допустим, у нас один староста на этаж;
@@ -192,6 +209,9 @@ def notify_starosta(bot, session, floor, message_text):
         User.is_blocked.is_(False),
     ).all()
     for st in starosta_list:
+        if not should_notify_starosta_about_delivery_error(session, st, target_chat_id):
+            continue
+
         try:
             bot.send_message(
                 chat_id=int(st.chat_id),
@@ -226,6 +246,54 @@ def cmd_start(message):
         message.chat.id,
         "Привет! Рад видеть тебя здесь.\nПри возникновении трудностей с использованием бота пишите @Alexgear10001.\nПри наличии предложений по улучшению бота пишите @KVA06",
         reply_markup=get_main_menu(user_role, user_chat_id)
+    )
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_REFRESH_BOT)
+def refresh_bot_menu(message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        db_user = session.query(User).filter(User.chat_id == user_chat_id).first()
+        user_info = bot.get_chat(user_chat_id)
+        username = user_info.username or ""
+
+        if not db_user:
+            db_user = User(
+                chat_id=user_chat_id,
+                role=RoleEnum.USER,
+                username=f"{'@' if username else ''}{username or 'Нет'}",
+                first_name=user_info.first_name,
+                last_name=f"{user_info.last_name or ''}",
+            )
+            session.add(db_user)
+        else:
+            db_user.username = f"{'@' if username else ''}{username or 'Нет'}"
+            db_user.first_name = user_info.first_name
+            db_user.last_name = f"{user_info.last_name or ''}"
+
+        session.commit()
+        user_role = db_user.role.value
+
+    bot.send_message(
+        message.chat.id,
+        "Бот обновлён. Меню и данные профиля синхронизированы.",
+        reply_markup=get_main_menu(user_role, user_chat_id),
+    )
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_CANCEL)
+def cancel_dialog(message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        db_user = session.query(User).filter(User.chat_id == user_chat_id).first()
+        user_role = db_user.role.value if db_user else RoleEnum.USER.value
+
+    bot.send_message(
+        message.chat.id,
+        "Действие отменено.",
+        reply_markup=get_main_menu(user_role, user_chat_id),
     )
 
 
@@ -272,6 +340,31 @@ def starosta_show_users(message):
 @bot.message_handler(func=lambda msg: msg.text == BTN_NOTIFICATION_TIME)
 def manage_notification_time(message):
     handle_manage_notification_time(bot, message)
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_DELIVERY_ERROR_SETTINGS)
+def delivery_error_settings(message):
+    handle_delivery_error_settings(bot, message)
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_DELIVERY_ERRORS_ENABLE)
+def enable_delivery_errors(message):
+    handle_enable_delivery_errors(bot, message)
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_DELIVERY_ERRORS_DISABLE)
+def disable_delivery_errors(message):
+    handle_disable_delivery_errors(bot, message)
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_DELIVERY_ERRORS_MUTE)
+def mute_delivery_error_user(message):
+    handle_mute_delivery_error_user(bot, message)
+
+
+@bot.message_handler(func=lambda msg: msg.text == BTN_DELIVERY_ERRORS_UNMUTE)
+def unmute_delivery_error_user(message):
+    handle_unmute_delivery_error_user(bot, message)
 
 
 @bot.message_handler(func=lambda msg: msg.text == BTN_BROADCAST)

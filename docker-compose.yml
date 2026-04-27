@@ -8,6 +8,31 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /app
+          ignore:
+            - .git/
+            - .idea/
+            - .venv/
+            - __pycache__/
+            - node_modules/
+            - dashboard/node_modules/
+            - dashboard/dist/
+            - certs/
+            - .env
+        - action: rebuild
+          path: requirements.txt
+        - action: rebuild
+          path: Dockerfile
+        - action: rebuild
+          path: dashboard/package.json
+        - action: rebuild
+          path: dashboard/package-lock.json
+        - action: rebuild
+          path: dashboard/src
 
   web:
     build:
@@ -18,16 +43,48 @@ services:
     environment:
       WEB_HOST: 0.0.0.0
       WEB_PORT: 8000
-      WEB_SSL_CERTFILE: ""
-      WEB_SSL_KEYFILE: ""
-      WEB_SSL_KEYFILE_PASSWORD: ""
-      WEB_FORCE_HTTPS: "false"
+      # WEB_SSL_CERTFILE: ""
+      # WEB_SSL_KEYFILE: ""
+      WEB_SSL_CERTFILE: /etc/letsencrypt/live/dormitory6.duckdns.org
+      WEB_SSL_KEYFILE: /etc/letsencrypt/live/dormitory6.duckdns.org
+      # WEB_SSL_KEYFILE_PASSWORD: ""
+      # WEB_FORCE_HTTPS: "false"
+      WEB_FORCE_HTTPS: "true"
     command: python run_webapp.py
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "8000:8000"
+        # - "8000:8000"
+        - "463:8000"
+        - "8080:8000"
+    volumes:
+        - /etc/letsencrypt:/etc/letsencrypt:ro
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /app
+          ignore:
+            - .git/
+            - .idea/
+            - .venv/
+            - __pycache__/
+            - node_modules/
+            - dashboard/node_modules/
+            - dashboard/dist/
+            - certs/
+            - .env
+        - action: rebuild
+          path: requirements.txt
+        - action: rebuild
+          path: Dockerfile
+        - action: rebuild
+          path: dashboard/package.json
+        - action: rebuild
+          path: dashboard/package-lock.json
+        - action: rebuild
+          path: dashboard/src
 
   postgres:
     image: postgres:16-alpine

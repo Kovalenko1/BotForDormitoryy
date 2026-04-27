@@ -1,4 +1,5 @@
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -18,6 +19,9 @@ def _b64decode(value: str) -> str:
 
 
 def _sign_value(value: str) -> str:
+    if not BOT_TOKEN:
+        raise RuntimeError('BOT_TOKEN is required to sign dashboard tokens.')
+
     return hmac.new(
         BOT_TOKEN.encode(),
         f'dashboard:{value}'.encode(),
@@ -26,7 +30,8 @@ def _sign_value(value: str) -> str:
 
 
 def create_dashboard_token(chat_id: str, ttl_seconds: int | None = None) -> str:
-    expires_at = int(time.time()) + (ttl_seconds or DASHBOARD_TOKEN_TTL_SECONDS)
+    ttl = DASHBOARD_TOKEN_TTL_SECONDS
+    expires_at = int(time.time()) + int(ttl)
     payload = json.dumps({'chat_id': str(chat_id), 'exp': expires_at}, separators=(',', ':'))
     encoded_payload = _b64encode(payload)
     signature = _sign_value(encoded_payload)
@@ -34,23 +39,32 @@ def create_dashboard_token(chat_id: str, ttl_seconds: int | None = None) -> str:
 
 
 def verify_dashboard_token(token: str | None) -> str | None:
-    if not token or '.' not in token:
+    if not BOT_TOKEN or not token or '.' not in token:
         return None
 
     encoded_payload, signature = token.rsplit('.', 1)
-    expected_signature = _sign_value(encoded_payload)
+    try:
+        expected_signature = _sign_value(encoded_payload)
+    except RuntimeError:
+        return None
+
     if not hmac.compare_digest(signature, expected_signature):
         return None
 
     try:
         payload = json.loads(_b64decode(encoded_payload))
-    except (json.JSONDecodeError, ValueError):
+    except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError, ValueError):
         return None
 
-    expires_at = payload.get('exp')
     chat_id = payload.get('chat_id')
-    if not expires_at or not chat_id:
+    if not chat_id:
         return None
+
+    try:
+        expires_at = int(payload.get('exp'))
+    except (TypeError, ValueError):
+        return None
+
     if int(expires_at) < int(time.time()):
         return None
 

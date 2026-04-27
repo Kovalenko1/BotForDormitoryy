@@ -2,7 +2,8 @@ import telebot
 
 from config import NOTIFICATION_HOUR, NOTIFICATION_MINUTE
 from database import get_db_session
-from models import FloorNotificationSetting, RoleEnum, User
+from keyboards import BTN_CANCEL, get_delivery_error_settings_keyboard, get_main_menu
+from models import DeliveryErrorNotificationPreference, FloorNotificationSetting, RoleEnum, User
 from utils import (
     format_notification_time,
     parse_block,
@@ -10,6 +11,237 @@ from utils import (
     parse_notification_time,
     parse_room,
 )
+
+
+def _find_starosta(session, chat_id: str) -> User | None:
+    user = session.query(User).filter(User.chat_id == chat_id).first()
+    if not user or user.role != RoleEnum.STAROSTA or not user.floor:
+        return None
+
+    return user
+
+
+def _get_delivery_error_preference(
+    session,
+    starosta_chat_id: str,
+    target_chat_id: str | None,
+) -> DeliveryErrorNotificationPreference | None:
+    query = session.query(DeliveryErrorNotificationPreference).filter(
+        DeliveryErrorNotificationPreference.starosta_chat_id == starosta_chat_id,
+    )
+
+    if target_chat_id is None:
+        query = query.filter(DeliveryErrorNotificationPreference.target_chat_id.is_(None))
+    else:
+        query = query.filter(DeliveryErrorNotificationPreference.target_chat_id == target_chat_id)
+
+    return query.first()
+
+
+def _set_delivery_error_preference(
+    session,
+    starosta_chat_id: str,
+    target_chat_id: str | None,
+    enabled: bool,
+) -> DeliveryErrorNotificationPreference:
+    preference = _get_delivery_error_preference(session, starosta_chat_id, target_chat_id)
+    if preference is None:
+        preference = DeliveryErrorNotificationPreference(
+            starosta_chat_id=starosta_chat_id,
+            target_chat_id=target_chat_id,
+        )
+        session.add(preference)
+
+    preference.enabled = enabled
+    return preference
+
+
+def _resolve_floor_user(session, floor: int, value: str) -> User | None:
+    normalized = value.strip()
+    if not normalized:
+        return None
+
+    user = session.query(User).filter(
+        User.floor == floor,
+        User.chat_id == normalized,
+    ).first()
+    if user:
+        return user
+
+    return session.query(User).filter(
+        User.floor == floor,
+        User.room == normalized.upper(),
+    ).first()
+
+
+def should_notify_starosta_about_delivery_error(
+    session,
+    starosta: User,
+    target_chat_id: str | None = None,
+) -> bool:
+    global_preference = _get_delivery_error_preference(session, starosta.chat_id, None)
+    if global_preference and not global_preference.enabled:
+        return False
+
+    if target_chat_id:
+        target_preference = _get_delivery_error_preference(session, starosta.chat_id, target_chat_id)
+        if target_preference and not target_preference.enabled:
+            return False
+
+    return True
+
+
+def handle_delivery_error_settings(bot: telebot.TeleBot, message: telebot.types.Message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+        global_preference = _get_delivery_error_preference(session, user_chat_id, None)
+        muted_count = session.query(DeliveryErrorNotificationPreference).filter(
+            DeliveryErrorNotificationPreference.starosta_chat_id == user_chat_id,
+            DeliveryErrorNotificationPreference.target_chat_id.isnot(None),
+            DeliveryErrorNotificationPreference.enabled.is_(False),
+        ).count()
+        status = "включены" if not global_preference or global_preference.enabled else "отключены"
+
+    bot.send_message(
+        message.chat.id,
+        f"Уведомления об ошибках доставки для вашего этажа сейчас {status}. "
+        f"Исключений по пользователям: {muted_count}.",
+        reply_markup=get_delivery_error_settings_keyboard(),
+    )
+
+
+def handle_enable_delivery_errors(bot: telebot.TeleBot, message: telebot.types.Message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+        _set_delivery_error_preference(session, user_chat_id, None, True)
+        session.commit()
+
+    bot.send_message(
+        message.chat.id,
+        "Уведомления обо всех ошибках доставки включены.",
+        reply_markup=get_main_menu("starosta", user_chat_id),
+    )
+
+
+def handle_disable_delivery_errors(bot: telebot.TeleBot, message: telebot.types.Message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+        _set_delivery_error_preference(session, user_chat_id, None, False)
+        session.commit()
+
+    bot.send_message(
+        message.chat.id,
+        "Уведомления обо всех ошибках доставки отключены.",
+        reply_markup=get_main_menu("starosta", user_chat_id),
+    )
+
+
+def handle_mute_delivery_error_user(bot: telebot.TeleBot, message: telebot.types.Message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+    bot.send_message(
+        message.chat.id,
+        "Введите chat_id или комнату пользователя, по которому не нужно присылать ошибки доставки.",
+    )
+    bot.register_next_step_handler(message, process_mute_delivery_error_user, bot=bot)
+
+
+def process_mute_delivery_error_user(message, bot: telebot.TeleBot):
+    user_chat_id = str(message.from_user.id)
+    value = message.text.strip()
+
+    if value == BTN_CANCEL:
+        bot.send_message(message.chat.id, "Действие отменено.", reply_markup=get_main_menu("starosta", user_chat_id))
+        return
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+        target = _resolve_floor_user(session, starosta.floor, value)
+        if not target:
+            bot.send_message(message.chat.id, "Пользователь на вашем этаже не найден.")
+            return
+
+        _set_delivery_error_preference(session, user_chat_id, target.chat_id, False)
+        session.commit()
+
+    bot.send_message(
+        message.chat.id,
+        "Уведомления об ошибках доставки для этого пользователя отключены.",
+        reply_markup=get_main_menu("starosta", user_chat_id),
+    )
+
+
+def handle_unmute_delivery_error_user(bot: telebot.TeleBot, message: telebot.types.Message):
+    user_chat_id = str(message.from_user.id)
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+    bot.send_message(
+        message.chat.id,
+        "Введите chat_id или комнату пользователя, по которому снова нужно присылать ошибки доставки.",
+    )
+    bot.register_next_step_handler(message, process_unmute_delivery_error_user, bot=bot)
+
+
+def process_unmute_delivery_error_user(message, bot: telebot.TeleBot):
+    user_chat_id = str(message.from_user.id)
+    value = message.text.strip()
+
+    if value == BTN_CANCEL:
+        bot.send_message(message.chat.id, "Действие отменено.", reply_markup=get_main_menu("starosta", user_chat_id))
+        return
+
+    with next(get_db_session()) as session:
+        starosta = _find_starosta(session, user_chat_id)
+        if not starosta:
+            bot.send_message(message.chat.id, "Эта настройка доступна только старосте этажа.")
+            return
+
+        target = _resolve_floor_user(session, starosta.floor, value)
+        if not target:
+            bot.send_message(message.chat.id, "Пользователь на вашем этаже не найден.")
+            return
+
+        _set_delivery_error_preference(session, user_chat_id, target.chat_id, True)
+        session.commit()
+
+    bot.send_message(
+        message.chat.id,
+        "Уведомления об ошибках доставки для этого пользователя включены.",
+        reply_markup=get_main_menu("starosta", user_chat_id),
+    )
 
 
 def get_or_create_floor_setting(session, floor: int) -> FloorNotificationSetting:

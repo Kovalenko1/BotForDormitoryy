@@ -1,35 +1,46 @@
 .page {
   display: grid;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .hero {
   padding: 24px;
   display: grid;
   gap: 14px;
-  background:
-    radial-gradient(ellipse at top left, rgba(123, 241, 161, 0.16), transparent 38%),
-    radial-gradient(ellipse at 90% 20%, rgba(214, 255, 129, 0.09), transparent 24%),
-    linear-gradient(155deg, rgba(7, 14, 10, 0.99), rgba(10, 18, 13, 0.96));
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--hero-bg);
+  color: var(--hero-text);
 }
 
 .filters {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.filters label {
+  min-width: 0;
 }
 
 .summary {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .summaryCard {
   padding: 14px;
   display: grid;
   gap: 8px;
-  background: linear-gradient(180deg, rgba(14, 24, 18, 0.92), rgba(9, 16, 11, 0.88));
+  background: var(--surface-inset);
 }
 
 .summaryLabel {
@@ -41,12 +52,20 @@
 }
 
 .summaryValue {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: clamp(1.05rem, 1.8vw, 1.45rem);
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .chart {
   padding: 18px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .chartHeader {
@@ -78,13 +97,131 @@
 .legendItem {
   border-radius: 999px;
   padding: 5px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--grade-border, rgba(255, 255, 255, 0.08));
+  background: var(--grade-bg, var(--surface-inset));
+  color: var(--grade-color, var(--text-secondary));
   font-size: 11px;
+  font-weight: 700;
+}
+
+.chartHeader > div {
+  min-width: 0;
+}
+
+.gradeExcellent {
+  --grade-color: var(--accent-purple);
+  --grade-bg: rgba(82, 54, 124, 0.28);
+  --grade-border: rgba(199, 166, 255, 0.34);
+  --grade-solid: #8258d6;
+  color: var(--grade-color);
+}
+
+.gradeGood {
+  --grade-color: var(--accent-green);
+  --grade-bg: rgba(42, 92, 66, 0.26);
+  --grade-border: rgba(145, 217, 179, 0.32);
+  --grade-solid: #3fa96a;
+  color: var(--grade-color);
+}
+
+.gradeSatisfactory {
+  --grade-color: var(--accent-orange);
+  --grade-bg: rgba(121, 78, 31, 0.26);
+  --grade-border: rgba(255, 184, 105, 0.34);
+  --grade-solid: #d88a38;
+  color: var(--grade-color);
+}
+
+.gradeUnsatisfactory {
+  --grade-color: var(--accent-red);
+  --grade-bg: rgba(121, 43, 43, 0.26);
+  --grade-border: rgba(255, 141, 130, 0.34);
+  --grade-solid: #c85a50;
+  color: var(--grade-color);
+}
+
+.ratingGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.ratingCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(111, 166, 127, 0.14);
+  background: var(--surface-inset);
+}
+
+.ratingHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ratingTitle {
+  margin-top: 6px;
+  font-weight: 800;
+}
+
+.levelBadge {
+  border-radius: 999px;
+  padding: 6px 10px;
+  border: 1px solid rgba(214, 255, 129, 0.22);
+  background: var(--surface-highlight);
+  color: var(--accent-gold);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ratingMeta {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.levelBar {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(111, 166, 127, 0.14);
+}
+
+.levelBar span {
+  display: block;
+  height: 100%;
+  min-width: 7px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-gold));
+}
+
+.achievementRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.achievementPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  border: 1px solid var(--achievement-border);
+  background: var(--achievement-bg);
+  color: var(--achievement-text);
+  font-size: 10px;
   font-weight: 700;
 }
 
 /* ── Vertical bar histogram ───────────────────────────── */
 .histogramWrap {
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: visible;
   padding-bottom: 8px;
@@ -135,8 +272,10 @@
 }
 
 .colSegment {
+  flex: 1 1 0;
   width: 100%;
   min-height: 4px;
+  background: var(--grade-solid, var(--accent-green));
 }
 
 .colGhost {
@@ -174,7 +313,8 @@
 
 @media (max-width: 900px) {
   .filters,
-  .summary {
+  .summary,
+  .ratingGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -187,8 +327,13 @@
   }
 
   .filters,
-  .summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .summary,
+  .ratingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartHeader {
+    flex-direction: column;
   }
 
   .col {
@@ -205,5 +350,11 @@
 
   .colLabel {
     font-size: 9.5px;
+  }
+}
+
+@media (max-width: 520px) {
+  .ratingGrid {
+    grid-template-columns: 1fr;
   }
 }

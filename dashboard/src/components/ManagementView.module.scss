@@ -17,10 +17,8 @@
   display: grid;
   gap: 14px;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at top left, rgba(123, 241, 161, 0.16), transparent 38%),
-    radial-gradient(ellipse at 90% 20%, rgba(214, 255, 129, 0.09), transparent 24%),
-    linear-gradient(155deg, rgba(7, 14, 10, 0.99), rgba(10, 18, 13, 0.96));
+  background: var(--hero-bg);
+  color: var(--hero-text);
 }
 
 .heroTop {
@@ -28,6 +26,10 @@
   justify-content: space-between;
   gap: 18px;
   align-items: flex-end;
+}
+
+.heroTitleBlock {
+  max-width: 42rem;
 }
 
 .heroMetrics {
@@ -84,7 +86,9 @@
 }
 
 .tabButton {
-  min-width: max-content;
+  flex: 0 0 auto;
+  min-width: 132px;
+  max-width: min(220px, 62vw);
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid transparent;
@@ -92,22 +96,27 @@
   color: var(--text-secondary);
   cursor: pointer;
   text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
 .tabButton:hover {
-  background: rgba(10, 18, 13, 0.78);
+  background: var(--nav-hover-bg);
   border-color: rgba(122, 255, 167, 0.14);
   color: var(--text-primary);
 }
 
 .tabButtonActive {
-  background: linear-gradient(135deg, #e5ffed 0%, #8df4b3 100%);
-  color: #041008;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--button-primary-shadow);
 }
 
 .tabTitle {
   font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .tabHint {
@@ -135,26 +144,38 @@
   font-weight: 700;
 }
 
+.roleIconAdmin {
+  color: var(--accent-gold);
+}
+
+.roleIconChairman {
+  color: var(--accent-green);
+}
+
+.roleIconStarosta {
+  color: var(--text-secondary);
+}
+
 .roleCard {
   padding: 12px;
   border-radius: 18px;
   border: 1px solid rgba(111, 166, 127, 0.14);
-  background: rgba(8, 14, 10, 0.9);
+  background: var(--surface-inset);
 }
 
 .roleCardAdmin {
   border-color: rgba(214, 255, 129, 0.18);
-  background: linear-gradient(180deg, rgba(20, 28, 12, 0.94), rgba(9, 14, 10, 0.94));
+  background: var(--surface-inset);
 }
 
 .roleCardChairman {
   border-color: rgba(122, 255, 167, 0.16);
-  background: linear-gradient(180deg, rgba(10, 21, 14, 0.94), rgba(8, 14, 10, 0.94));
+  background: var(--surface-inset);
 }
 
 .roleCardStarosta {
   border-color: rgba(145, 217, 179, 0.16);
-  background: linear-gradient(180deg, rgba(12, 22, 16, 0.94), rgba(8, 14, 10, 0.94));
+  background: var(--surface-inset);
 }
 
 .roleHeader {
@@ -195,11 +216,29 @@
   flex-shrink: 0;
   border-radius: 999px;
   padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-inset);
+  color: var(--text-secondary);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.statusPillWhite {
+  border-color: rgba(157, 212, 181, 0.3);
+  background: var(--success-bg);
+  color: var(--accent-green);
+}
+
+.statusPillBlack {
+  color: var(--text-muted);
+}
+
+.statusPillBlocked {
+  border-color: rgba(255, 132, 117, 0.34);
+  background: var(--error-bg);
+  color: var(--accent-red);
 }
 
 .resetButton {
@@ -246,7 +285,7 @@
   padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid rgba(111, 166, 127, 0.12);
-  background: rgba(6, 11, 8, 0.84);
+  background: var(--surface-inset);
   color: var(--text-secondary);
 }
 
@@ -277,7 +316,7 @@
   padding: 18px;
   border-radius: 28px;
   border: 1px solid var(--border-subtle);
-  background: linear-gradient(180deg, rgba(9, 16, 11, 0.96), rgba(6, 11, 8, 0.96));
+  background: var(--surface-base);
   box-shadow: var(--shadow-card);
   min-width: 0;
   overflow: hidden;
@@ -310,7 +349,7 @@
   flex-shrink: 0;
   border-radius: 16px;
   border: 1px solid rgba(122, 255, 167, 0.16);
-  background: rgba(8, 15, 11, 0.88);
+  background: var(--surface-inset);
   color: var(--accent-green);
 }
 
@@ -344,7 +383,7 @@
   padding: 14px;
   border-radius: 18px;
   border: 1px solid var(--border-subtle);
-  background: rgba(7, 13, 10, 0.9);
+  background: var(--surface-inset);
 }
 
 .keyLabel {
@@ -380,7 +419,7 @@
   padding: 28px 16px;
   text-align: center;
   color: var(--text-dim);
-  background: rgba(7, 13, 10, 0.74);
+  background: var(--surface-inset);
 }
 
 .sectionBadge {
@@ -389,7 +428,7 @@
   border-radius: 999px;
   padding: 8px 12px;
   border: 1px solid var(--border-subtle);
-  background: rgba(7, 13, 10, 0.8);
+  background: var(--surface-inset);
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
@@ -481,12 +520,12 @@
 
 .actionButtonAccent {
   border-color: rgba(122, 255, 167, 0.18);
-  background: rgba(13, 27, 18, 0.92);
+  background: var(--surface-highlight);
   color: var(--accent-green);
 }
 
 .actionButtonNeutral {
-  background: rgba(8, 14, 10, 0.92);
+  background: var(--surface-inset);
   color: var(--text-secondary);
 }
 
@@ -511,7 +550,20 @@
   padding: 14px;
   border-radius: 18px;
   border: 1px solid var(--border-subtle);
-  background: rgba(8, 14, 10, 0.86);
+  background: var(--surface-inset);
+}
+
+.accessUserRow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.accessUserName {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .roleTagRow {
@@ -556,7 +608,7 @@
   padding: 14px;
   border-radius: 22px;
   border: 1px solid var(--border-subtle);
-  background: linear-gradient(180deg, rgba(10, 17, 12, 0.96), rgba(7, 13, 10, 0.92));
+  background: var(--surface-inset);
 }
 
 .notificationRow {
@@ -617,7 +669,7 @@
 
 .residentCardClickable:hover {
   border-color: rgba(122, 255, 167, 0.18);
-  background: rgba(10, 18, 13, 0.94);
+  background: var(--surface-highlight);
 }
 
 /* ── User action modal ───────────────────────────────── */
@@ -628,10 +680,11 @@
   backdrop-filter: blur(6px);
   z-index: 200;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 16px;
   animation: fadeIn 160ms ease;
+  min-height: 100dvh;
 }
 
 @keyframes fadeIn {
@@ -639,17 +692,11 @@
   to { opacity: 1; }
 }
 
-@media (min-width: 600px) {
-  .modalOverlay {
-    align-items: center;
-  }
-}
-
 .modalPanel {
   width: min(480px, 100%);
   border-radius: 24px;
   border: 1px solid rgba(111, 166, 127, 0.2);
-  background: linear-gradient(180deg, rgba(11, 20, 14, 0.99) 0%, rgba(7, 13, 10, 0.99) 100%);
+  background: var(--surface-inset-strong);
   padding: 20px;
   animation: slideUp 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -715,7 +762,7 @@
   height: 32px;
   border-radius: 50%;
   border: 1px solid rgba(111, 166, 127, 0.16);
-  background: rgba(8, 14, 10, 0.9);
+  background: var(--surface-inset);
   color: var(--text-secondary);
   cursor: pointer;
   display: grid;
@@ -725,7 +772,7 @@
 }
 
 .modalClose:hover {
-  background: rgba(18, 32, 22, 0.96);
+  background: var(--surface-highlight);
   color: var(--text-primary);
 }
 
@@ -733,6 +780,17 @@
   color: var(--text-dim);
   font-size: 13px;
   padding: 8px 0;
+}
+
+:global(:root[data-theme='panda']) {
+  .metricLabel,
+  .metricCopy {
+    color: var(--hero-muted);
+  }
+
+  .tabButtonActive {
+    border-color: rgba(34, 134, 83, 0.24);
+  }
 }
 
 @media (max-width: 1260px) {
@@ -751,6 +809,14 @@
 
   .directoryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 640px) {
+  .accessUserRow {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
   }
 }
 
@@ -797,6 +863,7 @@
 
   .tabButton {
     min-width: 80px;
+    max-width: 136px;
     padding: 10px 12px;
   }
 

@@ -1,21 +1,42 @@
-import React, { startTransition, useEffect, useState } from 'react';
+import { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { DashboardView } from './components/DashboardView';
-import { GeneralLogsView } from './components/GeneralLogsView';
-import { UserFootprintView } from './components/UserFootprintView';
-import { ErrorsView } from './components/ErrorsView';
-import { ScheduleView } from './components/ScheduleView';
-import { ManagementView } from './components/ManagementView';
 import { ApiError, dashboardApi, getInitialView, initTelegramWebApp, waitForTelegramInitData } from './api';
 import type { DashboardSessionResponse, ViewType } from './types';
-import { StatisticsView } from './views/StatisticsView';
 import styles from './App.module.scss';
 
+export type ThemeName = 'dark' | 'panda';
+
+const DashboardView = lazy(() => import('./components/DashboardView').then(({ DashboardView }) => ({ default: DashboardView })));
+const GeneralLogsView = lazy(() => import('./components/GeneralLogsView').then(({ GeneralLogsView }) => ({ default: GeneralLogsView })));
+const UserFootprintView = lazy(() => import('./components/UserFootprintView').then(({ UserFootprintView }) => ({ default: UserFootprintView })));
+const ScheduleView = lazy(() => import('./components/ScheduleView').then(({ ScheduleView }) => ({ default: ScheduleView })));
+const ManagementView = lazy(() => import('./components/ManagementView').then(({ ManagementView }) => ({ default: ManagementView })));
+const StatisticsView = lazy(() => import('./views/StatisticsView').then(({ StatisticsView }) => ({ default: StatisticsView })));
+const ProfileView = lazy(() => import('./views/ProfileView').then(({ ProfileView }) => ({ default: ProfileView })));
+
+function ViewFallback() {
+  return (
+    <section className={`surface-panel ${styles.viewFallback}`}>
+      Загружаю раздел...
+    </section>
+  );
+}
+
 export default function App() {
-  const [currentView, setCurrentView] = useState<ViewType>(() => getInitialView());
-  const [visitedViews, setVisitedViews] = useState<ViewType[]>(() => [getInitialView()]);
+  const initialView = useMemo(() => getInitialView(), []);
+  const [currentView, setCurrentView] = useState<ViewType>(initialView);
+  const [visitedViews, setVisitedViews] = useState<ViewType[]>(() => [initialView]);
   const [session, setSession] = useState<DashboardSessionResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [theme, setTheme] = useState<ThemeName>(() => {
+    const storedTheme = window.localStorage.getItem('dashboard-theme');
+    return storedTheme === 'panda' ? 'panda' : 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('dashboard-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     let isActive = true;
@@ -52,6 +73,11 @@ export default function App() {
       return;
     }
 
+    if (!session.user.room && session.allowed_views.includes('profile') && currentView !== 'profile') {
+      setCurrentView('profile');
+      return;
+    }
+
     if (!session.allowed_views.includes(currentView)) {
       setCurrentView(session.allowed_views[0] ?? 'schedule');
     }
@@ -62,32 +88,30 @@ export default function App() {
   }, [currentView]);
 
   useEffect(() => {
-    if (!session) {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('view') === currentView) {
       return;
     }
 
-    setVisitedViews((current) => {
-      const next = [...current];
-      for (const view of session.allowed_views) {
-        if (!next.includes(view)) {
-          next.push(view);
-        }
-      }
-      return next;
-    });
-  }, [session]);
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
     url.searchParams.set('view', currentView);
     window.history.replaceState({}, '', url);
   }, [currentView]);
 
-  const handleChangeView = (view: ViewType) => {
+  const handleChangeView = useCallback((view: ViewType) => {
     startTransition(() => {
-      setCurrentView(view);
+      setCurrentView((current) => (current === view ? current : view));
     });
-  };
+  }, []);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((current) => (current === 'panda' ? 'dark' : 'panda'));
+  }, []);
+
+  const allowedViews = useMemo(() => new Set(session?.allowed_views ?? []), [session?.allowed_views]);
+  const mountedViews = useMemo(
+    () => visitedViews.filter((view) => allowedViews.has(view)),
+    [allowedViews, visitedViews],
+  );
 
   const renderView = (view: ViewType) => {
     switch (view) {
@@ -97,14 +121,14 @@ export default function App() {
         return <GeneralLogsView />;
       case 'users':
         return <UserFootprintView />;
-      case 'errors':
-        return <ErrorsView />;
       case 'schedule':
         return <ScheduleView session={session!} />;
       case 'statistics':
         return <StatisticsView session={session!} />;
       case 'management':
         return <ManagementView session={session!} onNavigate={handleChangeView} />;
+      case 'profile':
+        return <ProfileView session={session!} onSessionChange={setSession} />;
       default:
         return null;
     }
@@ -137,21 +161,27 @@ export default function App() {
 
   return (
     <div className={styles.root}>
-      <Sidebar currentView={currentView} onChangeView={handleChangeView} session={session} />
+      <Sidebar
+        currentView={currentView}
+        onChangeView={handleChangeView}
+        onToggleTheme={handleToggleTheme}
+        session={session}
+        theme={theme}
+      />
 
       <main className={styles.content}>
         <div className={styles.viewHost}>
-          {visitedViews
-            .filter((view) => session.allowed_views.includes(view))
-            .map((view) => (
-              <section
-                key={view}
-                className={view === currentView ? styles.view : styles.hidden}
-                aria-hidden={view === currentView ? undefined : true}
-              >
+          {mountedViews.map((view) => (
+            <section
+              key={view}
+              className={view === currentView ? styles.view : styles.hidden}
+              aria-hidden={view === currentView ? undefined : true}
+            >
+              <Suspense fallback={<ViewFallback />}>
                 {renderView(view)}
-              </section>
-            ))}
+              </Suspense>
+            </section>
+          ))}
         </div>
       </main>
     </div>
